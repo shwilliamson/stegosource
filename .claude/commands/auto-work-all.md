@@ -1,0 +1,1 @@
+../../.automatasaurus/commands/auto-work-all.md

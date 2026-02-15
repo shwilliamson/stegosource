@@ -1,0 +1,58 @@
+{
+  "version": "0.1.19",
+  "installed_at": "2026-02-15T06:59:00.437Z",
+  "updated_at": "2026-02-15T06:59:00.437Z",
+  "symlinks": [
+    "agents/architect",
+    "agents/designer",
+    "agents/developer",
+    "agents/evolver",
+    "agents/researcher",
+    "agents/tester",
+    "skills/agent-coordination",
+    "skills/api-design",
+    "skills/code-review",
+    "skills/css-standards",
+    "skills/github-issues",
+    "skills/github-workflow",
+    "skills/infrastructure-standards",
+    "skills/javascript-standards",
+    "skills/notifications",
+    "skills/pr-writing",
+    "skills/project-commands",
+    "skills/python-standards",
+    "skills/requirements-gathering",
+    "skills/security-standards",
+    "skills/team-coordination",
+    "skills/testing-standards",
+    "skills/user-stories",
+    "skills/work-issue",
+    "skills/workflow-orchestration",
+    "agents/architect.md",
+    "agents/designer.md",
+    "agents/developer.md",
+    "agents/evolver.md",
+    "agents/researcher.md",
+    "agents/tester.md",
+    "hooks/notify.sh",
+    "hooks/on-stop.sh",
+    "hooks/request-attention.sh",
+    "commands/auto-clear.md",
+    "commands/auto-discovery.md",
+    "commands/auto-evolve.md",
+    "commands/auto-plan.md",
+    "commands/auto-work-all.md",
+    "commands/auto-work-issue.md",
+    "commands/auto-work-milestone.md"
+  ],
+  "merged_blocks": [
+    {
+      "file": "CLAUDE.md",
+      "block": "CORE"
+    },
+    {
+      "file": ".claude/commands.md",
+      "block": "COMMANDS"
+    }
+  ]
+}

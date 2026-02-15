@@ -1,0 +1,1 @@
+../../.automatasaurus/hooks/request-attention.sh

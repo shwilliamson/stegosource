@@ -1,0 +1,1 @@
+../../.automatasaurus/agents/researcher/AGENT.md

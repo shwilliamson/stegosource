@@ -1,0 +1,1 @@
+../../.automatasaurus/hooks/on-stop.sh

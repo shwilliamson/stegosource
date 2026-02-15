@@ -1,0 +1,1 @@
+../../.automatasaurus/commands/auto-plan.md
