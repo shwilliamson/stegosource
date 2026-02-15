@@ -1,0 +1,14 @@
+{
+  "name": "Stegosource",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1": {}
+  },
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y tmux && curl -LsSf https://astral.sh/uv/install.sh | sh",
+  "customizations": {
+    "codespaces": {
+      "openFiles": ["README.md"]
+    }
+  }
+}
