@@ -81,5 +81,5 @@ Usage::
 
     fig = px.line(data, x="date", y="close", title="AAPL closing price")
     fig.update_layout(**STEGO_LAYOUT)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 """

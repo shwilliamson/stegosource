@@ -143,7 +143,7 @@ def _render_tool_calls(tool_calls: list[dict[str, object]]) -> None:
 # ---------------------------------------------------------------------------
 
 with st.sidebar:
-    st.image("logo.jpeg", use_container_width=False)
+    st.image("logo.jpeg", width="content")
     st.markdown("### Stegosource")
     st.caption("Dynamic Data Visualization Agent")
     st.divider()
@@ -219,12 +219,24 @@ with st.sidebar:
         st.session_state.pending_prompt = prompt
         st.rerun()
 
-    # Reset workspace button — restores dynamic section to defaults
+    # Action buttons — clear chat and reset workspace
     st.divider()
+    if st.button(
+        "Clear Chat",
+        key="clear_chat",
+        width="stretch",
+        help="Clear the conversation history and start a fresh session with the agent.",
+    ):
+        st.session_state.messages = []
+        st.session_state.processing = False
+        st.session_state.pending_prompt = None
+        st.toast("Chat cleared.")
+        st.rerun()
+
     if st.button(
         "Reset Workspace",
         key="reset_workspace",
-        use_container_width=True,
+        width="stretch",
         help="Restore the dynamic UI to its default empty state. Chat history is preserved.",
     ):
         if reset_dynamic_section():
@@ -288,11 +300,11 @@ try:
     _left_spacer, _center_col, _right_spacer = st.columns([1, 2, 1])
 
     with _center_col:
-        st.image("logo.jpeg", use_container_width=False)
+        st.image("logo.jpeg", width="content")
         st.caption("Dynamic Data Visualization Agent")
         st.write(
             "Ask Stegosource to fetch financial data, build interactive charts, "
-            "and create dashboards — all through natural conversation."
+            "and create dashboards \u2014 all through natural conversation."
         )
 
         st.divider()
@@ -305,7 +317,7 @@ try:
             st.button(
                 EXAMPLE_PROMPTS[0],
                 key="example_prompt_0",
-                use_container_width=True,
+                width="stretch",
                 on_click=_send_example_prompt,
                 args=(EXAMPLE_PROMPTS[0],),
             )
@@ -313,7 +325,7 @@ try:
             st.button(
                 EXAMPLE_PROMPTS[1],
                 key="example_prompt_1",
-                use_container_width=True,
+                width="stretch",
                 on_click=_send_example_prompt,
                 args=(EXAMPLE_PROMPTS[1],),
             )
@@ -321,7 +333,7 @@ try:
             st.button(
                 EXAMPLE_PROMPTS[2],
                 key="example_prompt_2",
-                use_container_width=True,
+                width="stretch",
                 on_click=_send_example_prompt,
                 args=(EXAMPLE_PROMPTS[2],),
             )
@@ -329,7 +341,7 @@ try:
             st.button(
                 EXAMPLE_PROMPTS[3],
                 key="example_prompt_3",
-                use_container_width=True,
+                width="stretch",
                 on_click=_send_example_prompt,
                 args=(EXAMPLE_PROMPTS[3],),
             )
@@ -341,7 +353,7 @@ except Exception:  # noqa: BLE001
     # ---------------------------------------------------------------------------
     st.error(
         "**The dynamic section encountered an error.** "
-        "The chat interface is still available in the sidebar — "
+        "The chat interface is still available in the sidebar \u2014 "
         "ask the agent to fix the issue, or use the **Reset Workspace** button."
     )
     st.exception(Exception(traceback.format_exc()))

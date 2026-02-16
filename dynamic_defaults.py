@@ -36,7 +36,7 @@ try:
     _left_spacer, _center_col, _right_spacer = st.columns([1, 2, 1])
 
     with _center_col:
-        st.image("logo.jpeg", use_container_width=False)
+        st.image("logo.jpeg", width="content")
         st.caption("Dynamic Data Visualization Agent")
         st.write(
             "Ask Stegosource to fetch financial data, build interactive charts, "
@@ -53,7 +53,7 @@ try:
             st.button(
                 EXAMPLE_PROMPTS[0],
                 key="example_prompt_0",
-                use_container_width=True,
+                width="stretch",
                 on_click=_send_example_prompt,
                 args=(EXAMPLE_PROMPTS[0],),
             )
@@ -61,7 +61,7 @@ try:
             st.button(
                 EXAMPLE_PROMPTS[1],
                 key="example_prompt_1",
-                use_container_width=True,
+                width="stretch",
                 on_click=_send_example_prompt,
                 args=(EXAMPLE_PROMPTS[1],),
             )
@@ -69,7 +69,7 @@ try:
             st.button(
                 EXAMPLE_PROMPTS[2],
                 key="example_prompt_2",
-                use_container_width=True,
+                width="stretch",
                 on_click=_send_example_prompt,
                 args=(EXAMPLE_PROMPTS[2],),
             )
@@ -77,7 +77,7 @@ try:
             st.button(
                 EXAMPLE_PROMPTS[3],
                 key="example_prompt_3",
-                use_container_width=True,
+                width="stretch",
                 on_click=_send_example_prompt,
                 args=(EXAMPLE_PROMPTS[3],),
             )

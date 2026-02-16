@@ -200,7 +200,7 @@ class TestSystemPrompt:
     def test_contains_chart_checklist(self) -> None:
         """System prompt must include a pre-save chart checklist."""
         assert "Chart Checklist" in SYSTEM_PROMPT
-        assert "use_container_width=True" in SYSTEM_PROMPT
+        assert 'width="stretch"' in SYSTEM_PROMPT
 
     # --- Form and Widget Generation Tests ---
 
@@ -395,11 +395,11 @@ class TestSystemPrompt:
         assert "stock_data" in dashboard_section
 
     def test_layout_examples_use_plotly_chart(self) -> None:
-        """Layout examples must use st.plotly_chart with use_container_width."""
+        """Layout examples must use st.plotly_chart with width stretch."""
         layout_start = SYSTEM_PROMPT.index("Complex Layout Patterns")
         layout_section = SYSTEM_PROMPT[layout_start:]
         assert "st.plotly_chart" in layout_section
-        assert "use_container_width=True" in layout_section
+        assert 'width="stretch"' in layout_section
 
     def test_tabbed_example_has_multiple_tabs(self) -> None:
         """Tabbed interface example must show multiple tabs."""

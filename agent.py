@@ -55,7 +55,7 @@ Streamlit hot-reloads and the user immediately sees the updated UI.
 
 - **NEVER** edit code between the scaffold markers.
 - **ALWAYS** place your generated code between the dynamic markers.
-- Use `st.plotly_chart(fig, use_container_width=True)` for charts.
+- Use `st.plotly_chart(fig, width="stretch")` for charts.
 - Use `st.columns()`, `st.tabs()`, `st.expander()` for layout.
 - Use `st.session_state` if you need persistent values across reruns.
 - Write clean, well-commented Python so the user can learn from your code.
@@ -221,7 +221,7 @@ try:
         labels={"date": "Date", "close": "Price (USD)"},
     )
     fig.update_layout(**STEGO_LAYOUT)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
     st.caption("Source: Alpha Vantage · Daily time series")
 except InvalidTickerError:
     st.error("Ticker 'AAPL' was not found. Check the symbol and try again.")
@@ -267,7 +267,7 @@ try:
         yaxis_title="Price (USD)",
         xaxis_rangeslider_visible=False,
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
     st.caption("Source: Alpha Vantage · OHLC daily data")
 except InvalidTickerError:
     st.error("Ticker 'AAPL' was not found. Check the symbol and try again.")
@@ -318,7 +318,7 @@ fig.update_layout(
     xaxis_title="Date",
     yaxis_title="Price (USD)",
 )
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, width="stretch")
 ```
 
 ### Modifying Existing Charts
@@ -336,7 +336,7 @@ Before saving your chart code, verify:
 2. Data fetching is wrapped in `try/except`
 3. Chart has a descriptive title
 4. Axes have labels (xaxis_title, yaxis_title or labels={})
-5. `st.plotly_chart(fig, use_container_width=True)` is used
+5. `st.plotly_chart(fig, width="stretch")` is used
 6. `st.caption()` is added below the chart describing the data source
 7. `STEGO_LAYOUT` template is applied via `fig.update_layout(**STEGO_LAYOUT)`
 8. Candlestick up color is `#00E676`, down color is `#E040A0`
@@ -391,7 +391,7 @@ try:
     if filtered:
         fig = px.line(filtered, x="date", y="close", title="AAPL — Filtered by date range")
         fig.update_layout(**STEGO_LAYOUT)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     else:
         st.info("No data available for the selected date range.")
 except InvalidTickerError:
@@ -439,7 +439,7 @@ try:
         )])
         fig.update_layout(**STEGO_LAYOUT)
         fig.update_layout(title_text="AAPL — Candlestick", xaxis_rangeslider_visible=False)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 except InvalidTickerError:
     st.error("Ticker not found.")
 except RateLimitError:
@@ -468,7 +468,7 @@ if symbol:
         data = fetch_daily(symbol)
         fig = px.line(data, x="date", y="close", title=f"{symbol} — Daily closing price")
         fig.update_layout(**STEGO_LAYOUT)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     except InvalidTickerError:
         st.error(f"Ticker '{symbol}' was not found. Check the symbol and try again.")
     except RateLimitError:
@@ -521,7 +521,7 @@ if symbols:
 
     fig.update_layout(**STEGO_LAYOUT)
     fig.update_layout(title_text="Stock comparison", xaxis_title="Date", yaxis_title="Price (USD)")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 ```
 
 ### Form with Submit Button Example
@@ -566,7 +566,7 @@ if submitted:
                     title=f"{symbol} — {start_date} to {end_date}",
                 )
                 fig.update_layout(**STEGO_LAYOUT)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
             else:
                 st.info("No data for the selected range.")
         except InvalidTickerError:
@@ -668,7 +668,7 @@ with col1:
         data = fetch_daily("AAPL")
         fig = px.line(data, x="date", y="close", title="AAPL — Daily close")
         fig.update_layout(**STEGO_LAYOUT)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
         st.caption("Source: Alpha Vantage")
     except InvalidTickerError:
         st.error("Ticker 'AAPL' was not found.")
@@ -684,7 +684,7 @@ with col2:
         data = fetch_daily("GOOGL")
         fig = px.line(data, x="date", y="close", title="GOOGL — Daily close")
         fig.update_layout(**STEGO_LAYOUT)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
         st.caption("Source: Alpha Vantage")
     except InvalidTickerError:
         st.error("Ticker 'GOOGL' was not found.")
@@ -716,7 +716,7 @@ try:
     with tab_line:
         fig = px.line(data, x="date", y="close", title="AAPL — Line chart")
         fig.update_layout(**STEGO_LAYOUT)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     with tab_candle:
         fig = go.Figure(data=[go.Candlestick(
@@ -730,11 +730,11 @@ try:
         )])
         fig.update_layout(**STEGO_LAYOUT)
         fig.update_layout(title_text="AAPL — Candlestick", xaxis_rangeslider_visible=False)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     with tab_data:
         import pandas as pd
-        st.dataframe(pd.DataFrame(data), use_container_width=True)
+        st.dataframe(pd.DataFrame(data), width="stretch")
 
 except InvalidTickerError:
     st.error("Ticker 'AAPL' was not found.")
@@ -803,7 +803,7 @@ if stock_data:
         xaxis_title="Date",
         yaxis_title="Price (USD)",
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
     st.caption("Source: Alpha Vantage · Daily time series")
 
     # Individual stock tabs
@@ -820,7 +820,7 @@ if stock_data:
                 )])
                 fig.update_layout(**STEGO_LAYOUT)
                 fig.update_layout(title_text=f"{symbol} — Detail")
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
             with col_info:
                 st.metric("Latest", f"${data[-1]['close']:.2f}")
                 st.metric("High", f"${max(r['high'] for r in data):.2f}")
@@ -844,11 +844,11 @@ try:
 
     fig = px.line(data, x="date", y="close", title="AAPL — Daily close")
     fig.update_layout(**STEGO_LAYOUT)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     with st.expander("View raw data"):
         import pandas as pd
-        st.dataframe(pd.DataFrame(data), use_container_width=True)
+        st.dataframe(pd.DataFrame(data), width="stretch")
 
     with st.expander("Chart settings"):
         st.caption("Customisation options would go here.")
@@ -901,7 +901,7 @@ Before saving your layout code, verify:
 3. Data is fetched before rendering (batch API calls where possible)
 4. Each chart has error handling wrapping its data fetch
 5. `STEGO_LAYOUT` theme is applied to all charts
-6. `use_container_width=True` is set on all `st.plotly_chart()` calls
+6. `width="stretch"` is set on all `st.plotly_chart()` calls
 7. Complex dashboards fetch data up front to avoid redundant API calls
 8. Metrics use `st.metric()` with label, value, and optional delta
 9. The code works on a fresh Streamlit rerun (no stale references)
