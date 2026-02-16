@@ -949,7 +949,7 @@ def _make_options() -> ClaudeAgentOptions:
         permission_mode="bypassPermissions",
         include_partial_messages=True,
         cwd=str(Path(__file__).resolve().parent),
-        model="sonnet",
+        model=os.getenv("AGENT_MODEL", "claude-opus-4-6"),
     )
 
 
