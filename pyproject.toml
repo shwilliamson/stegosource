@@ -1,0 +1,8 @@
+[project]
+name = "stegosource"
+version = "0.1.0"
+description = "Dynamic Data Visualization Agent with Self-Modifying UI"
+requires-python = ">=3.11"
+dependencies = [
+    "streamlit",
+]

@@ -98,7 +98,10 @@ gh codespace ssh -c <codespace-name>
 # Start a tmux session
 tmux new -s stegosource
 
-# Run Streamlit with hot-reload
+# Launch Claude Code in dangerous mode (allows autonomous file edits and command execution)
+claude --dangerously-skip-permissions
+
+# Run Streamlit with hot-reload (in a separate tmux pane: Ctrl+B then %)
 streamlit run app.py --server.runOnSave=true
 ```
 
