@@ -315,6 +315,267 @@ Before saving your chart code, verify:
 6. `st.caption()` is added below the chart describing the data source
 7. `STEGO_LAYOUT` template is applied via `fig.update_layout(**STEGO_LAYOUT)`
 8. Candlestick up color is `#00E676`, down color is `#E040A0`
+
+## Form and Widget Generation Patterns
+
+When the user asks for interactive controls (date pickers, dropdowns, text inputs, \
+multi-selects), write self-contained Streamlit widget code into the dynamic section \
+of `app.py`. Widgets must work after hot-reload and connect to data fetching and \
+chart rendering.
+
+### Key Principles
+
+- **Every widget needs a `key` parameter** for session state persistence across \
+Streamlit reruns. Use descriptive keys like `key="symbol_input"` or \
+`key="date_start"`.
+- **Streamlit reruns the entire script** when any widget value changes. Your code \
+must read the current widget values and use them gracefully (no stale references).
+- **Connect widgets to charts** — widget values should drive data fetching and \
+chart updates. When the user changes a dropdown or date range, the chart should \
+re-render with the new parameters.
+
+### Date Range Picker Example
+
+Use `st.date_input()` for date selection. Pair two date inputs for a range:
+
+```python
+import datetime
+import plotly.express as px
+from chart_theme import STEGO_LAYOUT
+from tools.alpha_vantage import (
+    InvalidTickerError, RateLimitError, MissingApiKeyError, ApiError, fetch_daily,
+)
+
+col1, col2 = st.columns(2)
+with col1:
+    start_date = st.date_input(
+        "Start date",
+        value=datetime.date.today() - datetime.timedelta(days=90),
+        key="date_start",
+    )
+with col2:
+    end_date = st.date_input(
+        "End date",
+        value=datetime.date.today(),
+        key="date_end",
+    )
+
+try:
+    data = fetch_daily("AAPL")
+    filtered = [r for r in data if start_date.isoformat() <= r["date"] <= end_date.isoformat()]
+    if filtered:
+        fig = px.line(filtered, x="date", y="close", title="AAPL — Filtered by date range")
+        fig.update_layout(**STEGO_LAYOUT)
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("No data available for the selected date range.")
+except InvalidTickerError:
+    st.error("Ticker not found.")
+except RateLimitError:
+    st.toast("Rate limit reached. Try again later.")
+except MissingApiKeyError:
+    st.warning("Alpha Vantage API key not configured.")
+except ApiError as exc:
+    st.error(f"Could not fetch data: {exc}")
+```
+
+### Dropdown Selector Example
+
+Use `st.selectbox()` for single-option selection (e.g., chart type, interval):
+
+```python
+import plotly.express as px
+import plotly.graph_objects as go
+from chart_theme import CANDLESTICK_DOWN, CANDLESTICK_UP, STEGO_LAYOUT
+from tools.alpha_vantage import (
+    InvalidTickerError, RateLimitError, MissingApiKeyError, ApiError, fetch_daily,
+)
+
+chart_type = st.selectbox(
+    "Chart type",
+    options=["Line", "Candlestick"],
+    key="chart_type_selector",
+)
+
+try:
+    data = fetch_daily("AAPL")
+    if chart_type == "Line":
+        fig = px.line(data, x="date", y="close", title="AAPL — Line chart")
+        fig.update_layout(**STEGO_LAYOUT)
+    else:
+        fig = go.Figure(data=[go.Candlestick(
+            x=[r["date"] for r in data],
+            open=[r["open"] for r in data],
+            high=[r["high"] for r in data],
+            low=[r["low"] for r in data],
+            close=[r["close"] for r in data],
+            increasing=dict(line=dict(color=CANDLESTICK_UP), fillcolor=CANDLESTICK_UP),
+            decreasing=dict(line=dict(color=CANDLESTICK_DOWN), fillcolor=CANDLESTICK_DOWN),
+        )])
+        fig.update_layout(**STEGO_LAYOUT)
+        fig.update_layout(title_text="AAPL — Candlestick", xaxis_rangeslider_visible=False)
+    st.plotly_chart(fig, use_container_width=True)
+except InvalidTickerError:
+    st.error("Ticker not found.")
+except RateLimitError:
+    st.toast("Rate limit reached. Try again later.")
+except MissingApiKeyError:
+    st.warning("Alpha Vantage API key not configured.")
+except ApiError as exc:
+    st.error(f"Could not fetch data: {exc}")
+```
+
+### Text Input Example
+
+Use `st.text_input()` for free-form text entry (e.g., stock symbol):
+
+```python
+import plotly.express as px
+from chart_theme import STEGO_LAYOUT
+from tools.alpha_vantage import (
+    InvalidTickerError, RateLimitError, MissingApiKeyError, ApiError, fetch_daily,
+)
+
+symbol = st.text_input("Stock symbol", value="AAPL", key="symbol_input").strip().upper()
+
+if symbol:
+    try:
+        data = fetch_daily(symbol)
+        fig = px.line(data, x="date", y="close", title=f"{symbol} — Daily closing price")
+        fig.update_layout(**STEGO_LAYOUT)
+        st.plotly_chart(fig, use_container_width=True)
+    except InvalidTickerError:
+        st.error(f"Ticker '{symbol}' was not found. Check the symbol and try again.")
+    except RateLimitError:
+        st.toast("Rate limit reached. Try again later.")
+    except MissingApiKeyError:
+        st.warning("Alpha Vantage API key not configured.")
+    except ApiError as exc:
+        st.error(f"Could not fetch data: {exc}")
+```
+
+### Multi-Select Example
+
+Use `st.multiselect()` for selecting multiple items (e.g., comparing symbols):
+
+```python
+import plotly.graph_objects as go
+from chart_theme import STEGO_LAYOUT
+from tools.alpha_vantage import (
+    InvalidTickerError, RateLimitError, MissingApiKeyError, ApiError, fetch_daily,
+)
+
+symbols = st.multiselect(
+    "Compare symbols",
+    options=["AAPL", "GOOGL", "MSFT", "TSLA", "AMZN"],
+    default=["AAPL", "GOOGL"],
+    key="compare_symbols",
+)
+
+if symbols:
+    fig = go.Figure()
+    for symbol in symbols:
+        try:
+            data = fetch_daily(symbol)
+            fig.add_trace(go.Scatter(
+                x=[r["date"] for r in data],
+                y=[r["close"] for r in data],
+                mode="lines",
+                name=symbol,
+            ))
+        except InvalidTickerError:
+            st.warning(f"Ticker '{symbol}' was not found. Skipping.")
+        except RateLimitError:
+            st.toast("Rate limit reached. Some data may be missing.")
+            break
+        except MissingApiKeyError:
+            st.warning("Alpha Vantage API key not configured.")
+            break
+        except ApiError as exc:
+            st.warning(f"Could not load {symbol}: {exc}")
+
+    fig.update_layout(**STEGO_LAYOUT)
+    fig.update_layout(title_text="Stock comparison", xaxis_title="Date", yaxis_title="Price (USD)")
+    st.plotly_chart(fig, use_container_width=True)
+```
+
+### Form with Submit Button Example
+
+Use `st.form()` with `st.form_submit_button()` to batch inputs and prevent \
+premature reruns. This is ideal when multiple inputs must be set before fetching \
+data:
+
+```python
+import datetime
+import plotly.express as px
+from chart_theme import STEGO_LAYOUT
+from tools.alpha_vantage import (
+    InvalidTickerError, RateLimitError, MissingApiKeyError, ApiError, fetch_daily,
+)
+
+with st.form(key="stock_form"):
+    symbol = st.text_input("Stock symbol", value="AAPL", key="form_symbol")
+    col1, col2 = st.columns(2)
+    with col1:
+        start_date = st.date_input(
+            "Start date",
+            value=datetime.date.today() - datetime.timedelta(days=90),
+            key="form_start",
+        )
+    with col2:
+        end_date = st.date_input("End date", value=datetime.date.today(), key="form_end")
+    submitted = st.form_submit_button("Fetch data")
+
+if submitted:
+    symbol = symbol.strip().upper()
+    if symbol:
+        try:
+            data = fetch_daily(symbol)
+            filtered = [
+                r for r in data
+                if start_date.isoformat() <= r["date"] <= end_date.isoformat()
+            ]
+            if filtered:
+                fig = px.line(
+                    filtered, x="date", y="close",
+                    title=f"{symbol} — {start_date} to {end_date}",
+                )
+                fig.update_layout(**STEGO_LAYOUT)
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("No data for the selected range.")
+        except InvalidTickerError:
+            st.error(f"Ticker '{symbol}' was not found.")
+        except RateLimitError:
+            st.toast("Rate limit reached. Try again later.")
+        except MissingApiKeyError:
+            st.warning("Alpha Vantage API key not configured.")
+        except ApiError as exc:
+            st.error(f"Could not fetch data: {exc}")
+```
+
+### Modifying or Removing Controls
+
+When the user asks to change controls (e.g., "add a date filter" or \
+"remove the dropdown"), read the current dynamic section first with the Read \
+tool, then use the Edit tool to add, replace, or remove the relevant widget code. \
+Keep surrounding code intact. Do NOT rewrite the entire dynamic section unless \
+the user explicitly requests a full reset.
+
+When removing a widget, also remove any logic that depends on its value (e.g., \
+filtering code that references a removed date picker).
+
+### Widget Checklist
+
+Before saving your widget code, verify:
+1. Every widget has a unique `key` parameter
+2. Widget values are read at the point of use (not cached in variables that could go stale)
+3. Data fetching uses the widget values to filter or parameterise queries
+4. Error handling wraps data fetching with specific exception types
+5. Charts update based on current widget state
+6. The code works on a fresh Streamlit rerun (no dependency on prior state)
+7. `st.form()` blocks use `st.form_submit_button()` and handle the `submitted` flag
+8. Layout uses `st.columns()` for side-by-side widgets when appropriate
 """
 
 # ---------------------------------------------------------------------------
