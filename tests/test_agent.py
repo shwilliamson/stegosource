@@ -92,7 +92,8 @@ class TestSystemPrompt:
 
     def test_contains_error_handling_pattern(self) -> None:
         """System prompt chart examples must include try/except error handling."""
-        assert "except Exception" in SYSTEM_PROMPT
+        assert "except InvalidTickerError" in SYSTEM_PROMPT
+        assert "except RateLimitError" in SYSTEM_PROMPT
         assert "st.error" in SYSTEM_PROMPT
 
     def test_contains_chart_title_guidance(self) -> None:
@@ -111,6 +112,42 @@ class TestSystemPrompt:
         """System prompt must reference candlestick up/down colors."""
         assert "CANDLESTICK_UP" in SYSTEM_PROMPT
         assert "CANDLESTICK_DOWN" in SYSTEM_PROMPT
+
+    def test_contains_error_handling_section(self) -> None:
+        """System prompt must include a dedicated Error Handling section."""
+        assert "## Error Handling" in SYSTEM_PROMPT
+
+    def test_contains_invalid_ticker_guidance(self) -> None:
+        """System prompt must instruct agent on InvalidTickerError handling."""
+        assert "InvalidTickerError" in SYSTEM_PROMPT
+        assert "Did you mean" in SYSTEM_PROMPT
+
+    def test_contains_rate_limit_toast_guidance(self) -> None:
+        """System prompt must instruct use of st.toast for rate limits."""
+        assert "st.toast" in SYSTEM_PROMPT
+        assert "rate limit" in SYSTEM_PROMPT.lower()
+
+    def test_contains_missing_api_key_guidance(self) -> None:
+        """System prompt must instruct on MissingApiKeyError handling."""
+        assert "MissingApiKeyError" in SYSTEM_PROMPT
+        assert "st.warning" in SYSTEM_PROMPT
+
+    def test_contains_network_error_guidance(self) -> None:
+        """System prompt must instruct on ApiError (network) handling."""
+        assert "ApiError" in SYSTEM_PROMPT
+        assert "network" in SYSTEM_PROMPT.lower()
+
+    def test_contains_code_quality_section(self) -> None:
+        """System prompt must include code quality checklist."""
+        assert "Code Quality" in SYSTEM_PROMPT
+        assert "Mentally trace" in SYSTEM_PROMPT
+
+    def test_contains_specific_exception_imports(self) -> None:
+        """System prompt error handling pattern must import specific exceptions."""
+        assert "from tools.alpha_vantage import" in SYSTEM_PROMPT
+        assert "InvalidTickerError" in SYSTEM_PROMPT
+        assert "RateLimitError" in SYSTEM_PROMPT
+        assert "MissingApiKeyError" in SYSTEM_PROMPT
 
     def test_contains_multi_symbol_example(self) -> None:
         """System prompt must include a multi-symbol comparison example."""

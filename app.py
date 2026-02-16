@@ -13,6 +13,7 @@ This is the main Streamlit application. It has two clearly marked sections:
 from __future__ import annotations
 
 import asyncio
+import os
 from typing import TYPE_CHECKING
 
 import streamlit as st
@@ -215,6 +216,28 @@ with st.sidebar:
         st.session_state.processing = True
         st.session_state.pending_prompt = prompt
         st.rerun()
+
+# ---------------------------------------------------------------------------
+# Persistent API key status banners
+# ---------------------------------------------------------------------------
+
+_anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+_alphavantage_key = os.environ.get("ALPHAVANTAGE_API_KEY", "").strip()
+
+if not _anthropic_key:
+    st.error(
+        "**Anthropic API key not configured.** "
+        "The agent cannot function without it. "
+        "Please add `ANTHROPIC_API_KEY` to your `.env` file and restart the app."
+    )
+
+if not _alphavantage_key:
+    st.warning(
+        "**Alpha Vantage API key not configured.** "
+        "Data features are unavailable. "
+        "Please add `ALPHAVANTAGE_API_KEY` to your `.env` file and restart the app. "
+        "Get a free key at https://www.alphavantage.co/support/#api-key"
+    )
 
 # === SCAFFOLD END ===
 

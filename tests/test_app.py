@@ -441,6 +441,73 @@ class TestExamplePrompts:
             }
 
 
+class TestApiKeyBanners:
+    """Verify persistent API key warning/error banners in app.py."""
+
+    def test_app_imports_os(self) -> None:
+        """app.py must import os for environment variable checks."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        assert "import os" in content
+
+    def test_anthropic_key_check_in_scaffold(self) -> None:
+        """app.py must check ANTHROPIC_API_KEY and show st.error if missing."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        assert "ANTHROPIC_API_KEY" in content
+        # Should have a persistent st.error for missing Anthropic key
+        assert "Anthropic API key not configured" in content
+
+    def test_alphavantage_key_check_in_scaffold(self) -> None:
+        """app.py must check ALPHAVANTAGE_API_KEY and show st.warning if missing."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        assert "ALPHAVANTAGE_API_KEY" in content
+        # Should have a persistent st.warning for missing Alpha Vantage key
+        assert "Alpha Vantage API key not configured" in content
+
+    def test_anthropic_key_uses_st_error(self) -> None:
+        """Missing Anthropic key should use st.error (not st.warning)."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        # Find the Anthropic key check section
+        idx = content.index("_anthropic_key")
+        section = content[idx : idx + 300]
+        assert "st.error" in section
+
+    def test_alphavantage_key_uses_st_warning(self) -> None:
+        """Missing Alpha Vantage key should use st.warning (not st.error)."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        # Find the 'if not _alphavantage_key' check section
+        idx = content.index("if not _alphavantage_key")
+        section = content[idx : idx + 400]
+        assert "st.warning" in section
+
+    def test_api_key_checks_before_dynamic_section(self) -> None:
+        """API key checks must appear before the dynamic section."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        anthropic_check = content.index("_anthropic_key")
+        dynamic_start = content.index("# === DYNAMIC START ===")
+        assert anthropic_check < dynamic_start
+
+    def test_api_key_checks_after_sidebar(self) -> None:
+        """API key checks must appear after the sidebar rendering."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        sidebar_section = content.index("with st.sidebar:")
+        anthropic_check = content.index("_anthropic_key")
+        assert sidebar_section < anthropic_check
+
+
 class TestEmptyStateDynamicSection:
     """Verify the dynamic section contains the empty state UI."""
 
