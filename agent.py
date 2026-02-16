@@ -88,6 +88,66 @@ The tool caches results for 5 minutes to avoid hitting the API rate limit \
 clear exceptions for invalid tickers, rate limits, missing API keys, and \
 network issues.
 
+## Error Handling
+
+When your generated code encounters errors, handle them with specific \
+exception types from `tools.alpha_vantage`:
+
+- **`InvalidTickerError`**: The ticker symbol is not recognised. Respond in \
+chat with a helpful message like: "That ticker doesn't seem to exist. \
+Did you mean AAPL?" Suggest common alternatives when possible.
+
+- **`RateLimitError`**: The Alpha Vantage API rate limit has been hit. Use \
+`st.toast("Alpha Vantage rate limit reached. Try again later.")` to show \
+a transient notification — do NOT use `st.error()` for rate limits.
+
+- **`MissingApiKeyError`**: The Alpha Vantage API key is not configured. \
+Use `st.warning("Alpha Vantage API key not configured. Data features are \
+unavailable.")` as a persistent banner.
+
+- **`ApiError`** (network errors, timeouts): Report the issue in chat with \
+a user-friendly message explaining what went wrong and suggesting they try \
+again. Example: `st.error("Could not connect to the data provider. \
+Please check your internet connection and try again.")`
+
+### Error Handling Pattern
+
+Always use specific exception types rather than bare `except Exception`:
+
+```python
+from tools.alpha_vantage import (
+    InvalidTickerError,
+    MissingApiKeyError,
+    RateLimitError,
+    ApiError,
+    fetch_daily,
+)
+
+try:
+    data = fetch_daily(symbol)
+except InvalidTickerError:
+    st.error(f"Ticker '{symbol}' was not found. Check the symbol and try again.")
+except RateLimitError:
+    st.toast("Alpha Vantage rate limit reached. Try again later.")
+except MissingApiKeyError:
+    st.warning("Alpha Vantage API key not configured. Data features are unavailable.")
+except ApiError as exc:
+    st.error(f"Could not fetch data: {exc}")
+```
+
+### Code Quality
+
+Before saving any code changes:
+1. **Mentally trace** the code to verify it is syntactically valid Python.
+2. **Check imports** — ensure every name you use is imported at the top.
+3. **Verify indentation** — consistent 4-space indentation throughout.
+4. **Test edge cases** — what happens with empty data, missing keys, etc.
+5. **Keep the dynamic section self-contained** — all code between the \
+dynamic markers must work independently when Streamlit re-runs the file.
+
+If you make a mistake and the hot-reload fails, the error will be visible \
+in the Streamlit UI. Read the error, fix the code, and save again.
+
 ## Chart Generation Patterns
 
 When the user asks for a chart, write self-contained code into the dynamic \
@@ -122,7 +182,9 @@ For time series data (e.g., stock closing prices), use Plotly Express:
 ```python
 import plotly.express as px
 from chart_theme import STEGO_LAYOUT
-from tools.alpha_vantage import fetch_daily
+from tools.alpha_vantage import (
+    InvalidTickerError, RateLimitError, MissingApiKeyError, ApiError, fetch_daily,
+)
 
 try:
     data = fetch_daily("AAPL")
@@ -136,8 +198,14 @@ try:
     fig.update_layout(**STEGO_LAYOUT)
     st.plotly_chart(fig, use_container_width=True)
     st.caption("Source: Alpha Vantage · Daily time series")
-except Exception as exc:
-    st.error(f"Failed to load chart data: {exc}")
+except InvalidTickerError:
+    st.error("Ticker 'AAPL' was not found. Check the symbol and try again.")
+except RateLimitError:
+    st.toast("Alpha Vantage rate limit reached. Try again later.")
+except MissingApiKeyError:
+    st.warning("Alpha Vantage API key not configured. Data features are unavailable.")
+except ApiError as exc:
+    st.error(f"Could not fetch data: {exc}")
 ```
 
 ### Candlestick Chart Example
@@ -147,7 +215,9 @@ For OHLC data, use Plotly Graph Objects:
 ```python
 import plotly.graph_objects as go
 from chart_theme import CANDLESTICK_DOWN, CANDLESTICK_UP, STEGO_LAYOUT
-from tools.alpha_vantage import fetch_daily
+from tools.alpha_vantage import (
+    InvalidTickerError, RateLimitError, MissingApiKeyError, ApiError, fetch_daily,
+)
 
 try:
     data = fetch_daily("AAPL")
@@ -174,8 +244,14 @@ try:
     )
     st.plotly_chart(fig, use_container_width=True)
     st.caption("Source: Alpha Vantage · OHLC daily data")
-except Exception as exc:
-    st.error(f"Failed to load chart data: {exc}")
+except InvalidTickerError:
+    st.error("Ticker 'AAPL' was not found. Check the symbol and try again.")
+except RateLimitError:
+    st.toast("Alpha Vantage rate limit reached. Try again later.")
+except MissingApiKeyError:
+    st.warning("Alpha Vantage API key not configured. Data features are unavailable.")
+except ApiError as exc:
+    st.error(f"Could not fetch data: {exc}")
 ```
 
 ### Multi-Symbol Comparison Example
@@ -183,7 +259,9 @@ except Exception as exc:
 ```python
 import plotly.graph_objects as go
 from chart_theme import STEGO_LAYOUT
-from tools.alpha_vantage import fetch_daily
+from tools.alpha_vantage import (
+    InvalidTickerError, RateLimitError, MissingApiKeyError, ApiError, fetch_daily,
+)
 
 symbols = ["AAPL", "GOOGL"]
 fig = go.Figure()
@@ -198,7 +276,15 @@ for symbol in symbols:
                 name=symbol,
             )
         )
-    except Exception as exc:
+    except InvalidTickerError:
+        st.warning(f"Ticker '{symbol}' was not found. Skipping.")
+    except RateLimitError:
+        st.toast("Alpha Vantage rate limit reached. Some data may be missing.")
+        break
+    except MissingApiKeyError:
+        st.warning("Alpha Vantage API key not configured. Data features are unavailable.")
+        break
+    except ApiError as exc:
         st.warning(f"Could not load {symbol}: {exc}")
 
 fig.update_layout(**STEGO_LAYOUT)
