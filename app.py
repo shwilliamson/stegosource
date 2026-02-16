@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import traceback
 from typing import TYPE_CHECKING
 
 import streamlit as st
@@ -26,6 +27,7 @@ from agent import (
     extract_tool_calls,
     query_agent_streaming,
 )
+from dynamic_defaults import reset_dynamic_section
 
 if TYPE_CHECKING:
     from agent import MessageType
@@ -217,6 +219,22 @@ with st.sidebar:
         st.session_state.pending_prompt = prompt
         st.rerun()
 
+    # Reset workspace button — restores dynamic section to defaults
+    st.divider()
+    if st.button(
+        "Reset Workspace",
+        key="reset_workspace",
+        use_container_width=True,
+        help="Restore the dynamic UI to its default empty state. Chat history is preserved.",
+    ):
+        if reset_dynamic_section():
+            st.toast("Workspace reset to defaults. Reloading\u2026")
+            st.rerun()
+        else:
+            st.error(
+                "Failed to reset workspace. Dynamic section markers may be missing."
+            )
+
 # ---------------------------------------------------------------------------
 # Persistent API key status banners
 # ---------------------------------------------------------------------------
@@ -242,79 +260,90 @@ if not _alphavantage_key:
 # === SCAFFOLD END ===
 
 # === DYNAMIC START ===
-# Agent-generated UI goes here. The agent may freely add, modify, or remove
-# any Streamlit or Plotly code in this section.
+try:
+    # Agent-generated UI goes here. The agent may freely add, modify, or remove
+    # any Streamlit or Plotly code in this section.
 
-# ---------------------------------------------------------------------------
-# Default empty state — shown until the agent modifies this section
-# ---------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
+    # Default empty state — shown until the agent modifies this section
+    # ---------------------------------------------------------------------------
 
-EXAMPLE_PROMPTS: list[str] = [
-    "Show me AAPL stock for the last 3 months",
-    "Add a date range picker",
-    "Compare TSLA and F",
-    "Create a candlestick chart for GOOGL",
-]
+    EXAMPLE_PROMPTS: list[str] = [
+        "Show me AAPL stock for the last 3 months",
+        "Add a date range picker",
+        "Compare TSLA and F",
+        "Create a candlestick chart for GOOGL",
+    ]
 
+    def _send_example_prompt(prompt_text: str) -> None:
+        """Callback for example prompt buttons.
 
-def _send_example_prompt(prompt_text: str) -> None:
-    """Callback for example prompt buttons.
+        Populates the chat with the selected prompt and triggers processing.
+        """
+        st.session_state.messages.append({"role": "user", "content": prompt_text})
+        st.session_state.processing = True
+        st.session_state.pending_prompt = prompt_text
 
-    Populates the chat with the selected prompt and triggers processing.
-    """
-    st.session_state.messages.append({"role": "user", "content": prompt_text})
-    st.session_state.processing = True
-    st.session_state.pending_prompt = prompt_text
+    # Centre the empty state content in the main area
+    _left_spacer, _center_col, _right_spacer = st.columns([1, 2, 1])
 
+    with _center_col:
+        st.image("logo.jpeg", use_container_width=False)
+        st.caption("Dynamic Data Visualization Agent")
+        st.write(
+            "Ask Stegosource to fetch financial data, build interactive charts, "
+            "and create dashboards — all through natural conversation."
+        )
 
-# Centre the empty state content in the main area
-_left_spacer, _center_col, _right_spacer = st.columns([1, 2, 1])
+        st.divider()
 
-with _center_col:
-    st.image("logo.jpeg", use_container_width=False)
-    st.caption("Dynamic Data Visualization Agent")
-    st.write(
-        "Ask Stegosource to fetch financial data, build interactive charts, "
-        "and create dashboards — all through natural conversation."
+        # 2x2 grid of example prompt cards
+        _row1_left, _row1_right = st.columns(2)
+        _row2_left, _row2_right = st.columns(2)
+
+        with _row1_left:
+            st.button(
+                EXAMPLE_PROMPTS[0],
+                key="example_prompt_0",
+                use_container_width=True,
+                on_click=_send_example_prompt,
+                args=(EXAMPLE_PROMPTS[0],),
+            )
+        with _row1_right:
+            st.button(
+                EXAMPLE_PROMPTS[1],
+                key="example_prompt_1",
+                use_container_width=True,
+                on_click=_send_example_prompt,
+                args=(EXAMPLE_PROMPTS[1],),
+            )
+        with _row2_left:
+            st.button(
+                EXAMPLE_PROMPTS[2],
+                key="example_prompt_2",
+                use_container_width=True,
+                on_click=_send_example_prompt,
+                args=(EXAMPLE_PROMPTS[2],),
+            )
+        with _row2_right:
+            st.button(
+                EXAMPLE_PROMPTS[3],
+                key="example_prompt_3",
+                use_container_width=True,
+                on_click=_send_example_prompt,
+                args=(EXAMPLE_PROMPTS[3],),
+            )
+
+except Exception:  # noqa: BLE001
+    # ---------------------------------------------------------------------------
+    # Dynamic section error recovery — display the traceback so the user (and
+    # the agent) can see what went wrong, while keeping the scaffold functional.
+    # ---------------------------------------------------------------------------
+    st.error(
+        "**The dynamic section encountered an error.** "
+        "The chat interface is still available in the sidebar — "
+        "ask the agent to fix the issue, or use the **Reset Workspace** button."
     )
-
-    st.divider()
-
-    # 2x2 grid of example prompt cards
-    _row1_left, _row1_right = st.columns(2)
-    _row2_left, _row2_right = st.columns(2)
-
-    with _row1_left:
-        st.button(
-            EXAMPLE_PROMPTS[0],
-            key="example_prompt_0",
-            use_container_width=True,
-            on_click=_send_example_prompt,
-            args=(EXAMPLE_PROMPTS[0],),
-        )
-    with _row1_right:
-        st.button(
-            EXAMPLE_PROMPTS[1],
-            key="example_prompt_1",
-            use_container_width=True,
-            on_click=_send_example_prompt,
-            args=(EXAMPLE_PROMPTS[1],),
-        )
-    with _row2_left:
-        st.button(
-            EXAMPLE_PROMPTS[2],
-            key="example_prompt_2",
-            use_container_width=True,
-            on_click=_send_example_prompt,
-            args=(EXAMPLE_PROMPTS[2],),
-        )
-    with _row2_right:
-        st.button(
-            EXAMPLE_PROMPTS[3],
-            key="example_prompt_3",
-            use_container_width=True,
-            on_click=_send_example_prompt,
-            args=(EXAMPLE_PROMPTS[3],),
-        )
+    st.exception(Exception(traceback.format_exc()))
 
 # === DYNAMIC END ===

@@ -138,15 +138,40 @@ except ApiError as exc:
 ### Code Quality
 
 Before saving any code changes:
-1. **Mentally trace** the code to verify it is syntactically valid Python.
-2. **Check imports** — ensure every name you use is imported at the top.
-3. **Verify indentation** — consistent 4-space indentation throughout.
-4. **Test edge cases** — what happens with empty data, missing keys, etc.
-5. **Keep the dynamic section self-contained** — all code between the \
+1. **Read the current `app.py`** with the Read tool first to understand the \
+current state of the dynamic section. Never edit blindly.
+2. **Mentally trace** the code to verify it is syntactically valid Python.
+3. **Check imports** — ensure every name you use is imported at the top of \
+the dynamic section (inside the `try` block).
+4. **Verify indentation** — consistent 4-space indentation throughout, noting \
+that the dynamic section code is inside a `try` block (indented one level).
+5. **Test edge cases** — what happens with empty data, missing keys, etc.
+6. **Keep the dynamic section self-contained** — all code between the \
 dynamic markers must work independently when Streamlit re-runs the file.
 
-If you make a mistake and the hot-reload fails, the error will be visible \
-in the Streamlit UI. Read the error, fix the code, and save again.
+### Error Recovery
+
+The dynamic section is wrapped in a `try/except` block. If your code crashes, \
+the error traceback will be displayed in the main area while the chat interface \
+in the sidebar **remains functional**. This means:
+
+- The user can still talk to you via the chat even if the UI is broken.
+- The error traceback is visible — **read it carefully** to understand what \
+went wrong.
+- Fix the code and save again. Streamlit will hot-reload with your fix.
+
+**Recovery workflow when you break something:**
+1. The user will see the error and may ask you to fix it.
+2. **Read `app.py`** to see the current (broken) state.
+3. **Read the error traceback** shown in the UI or from the Streamlit logs.
+4. **Identify the bug** — common issues are syntax errors, missing imports, \
+undefined variables, or incorrect indentation.
+5. **Fix the code** using the Edit tool and save. The hot-reload will apply \
+the fix immediately.
+
+**The user also has a "Reset Workspace" button** in the sidebar that restores \
+the dynamic section to its default empty state. This is a last resort if the \
+code is too broken to fix incrementally.
 
 ## Chart Generation Patterns
 
