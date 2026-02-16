@@ -142,6 +142,45 @@ class TestSystemPrompt:
         assert "Code Quality" in SYSTEM_PROMPT
         assert "Mentally trace" in SYSTEM_PROMPT
 
+    def test_contains_error_recovery_section(self) -> None:
+        """System prompt must include an Error Recovery section."""
+        assert "Error Recovery" in SYSTEM_PROMPT
+
+    def test_error_recovery_mentions_try_except(self) -> None:
+        """Error recovery section should mention the try/except wrapper."""
+        assert "try/except" in SYSTEM_PROMPT or "try block" in SYSTEM_PROMPT
+
+    def test_error_recovery_mentions_traceback(self) -> None:
+        """Error recovery should instruct agent to read the traceback."""
+        assert "traceback" in SYSTEM_PROMPT.lower()
+
+    def test_error_recovery_mentions_read_app(self) -> None:
+        """Error recovery should instruct agent to read app.py before editing."""
+        recovery_start = SYSTEM_PROMPT.index("Error Recovery")
+        recovery_section = SYSTEM_PROMPT[recovery_start:]
+        assert "Read" in recovery_section
+        assert "app.py" in recovery_section
+
+    def test_error_recovery_mentions_reset_button(self) -> None:
+        """Error recovery should mention the Reset Workspace button."""
+        assert "Reset Workspace" in SYSTEM_PROMPT
+
+    def test_error_recovery_mentions_chat_still_works(self) -> None:
+        """Error recovery should note that chat remains functional during errors."""
+        recovery_start = SYSTEM_PROMPT.index("Error Recovery")
+        recovery_section = SYSTEM_PROMPT[recovery_start:]
+        assert (
+            "chat" in recovery_section.lower() or "sidebar" in recovery_section.lower()
+        )
+
+    def test_code_quality_instructs_read_before_edit(self) -> None:
+        """Code quality section should instruct reading app.py before editing."""
+        quality_start = SYSTEM_PROMPT.index("Code Quality")
+        quality_end = SYSTEM_PROMPT.index("Error Recovery")
+        quality_section = SYSTEM_PROMPT[quality_start:quality_end]
+        assert "Read" in quality_section
+        assert "app.py" in quality_section
+
     def test_contains_specific_exception_imports(self) -> None:
         """System prompt error handling pattern must import specific exceptions."""
         assert "from tools.alpha_vantage import" in SYSTEM_PROMPT

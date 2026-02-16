@@ -625,3 +625,149 @@ class TestToolCallDisplay:
         # Should check for tool_calls in message rendering
         assert "tool_calls" in scaffold_content
         assert "_render_tool_calls" in scaffold_content
+
+
+# ---------------------------------------------------------------------------
+# Error recovery — dynamic section wrapped in try/except
+# ---------------------------------------------------------------------------
+
+
+class TestDynamicSectionErrorRecovery:
+    """Verify the dynamic section is wrapped in error handling."""
+
+    def test_dynamic_section_wrapped_in_try(self) -> None:
+        """Dynamic section code should be inside a try block."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        dynamic_start = content.index("# === DYNAMIC START ===")
+        dynamic_end = content.index("# === DYNAMIC END ===")
+        dynamic_content = content[dynamic_start:dynamic_end]
+
+        assert "try:" in dynamic_content
+
+    def test_dynamic_section_has_except_handler(self) -> None:
+        """Dynamic section should have an except clause for error recovery."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        dynamic_start = content.index("# === DYNAMIC START ===")
+        dynamic_end = content.index("# === DYNAMIC END ===")
+        dynamic_content = content[dynamic_start:dynamic_end]
+
+        assert "except" in dynamic_content
+
+    def test_error_recovery_shows_error_message(self) -> None:
+        """Error handler should display an error message to the user."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        dynamic_start = content.index("# === DYNAMIC START ===")
+        dynamic_end = content.index("# === DYNAMIC END ===")
+        dynamic_content = content[dynamic_start:dynamic_end]
+
+        assert "st.error" in dynamic_content
+
+    def test_error_recovery_shows_traceback(self) -> None:
+        """Error handler should display the traceback for debugging."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        dynamic_start = content.index("# === DYNAMIC START ===")
+        dynamic_end = content.index("# === DYNAMIC END ===")
+        dynamic_content = content[dynamic_start:dynamic_end]
+
+        assert "st.exception" in dynamic_content or "traceback" in dynamic_content
+
+    def test_app_imports_traceback(self) -> None:
+        """app.py should import the traceback module for error display."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        assert "import traceback" in content
+
+    def test_error_message_mentions_chat_still_available(self) -> None:
+        """Error message should tell the user the chat interface still works."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        dynamic_start = content.index("# === DYNAMIC START ===")
+        dynamic_end = content.index("# === DYNAMIC END ===")
+        dynamic_content = content[dynamic_start:dynamic_end]
+
+        assert "sidebar" in dynamic_content.lower() or "chat" in dynamic_content.lower()
+
+    def test_error_message_mentions_reset(self) -> None:
+        """Error message should mention the Reset Workspace button."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        dynamic_start = content.index("# === DYNAMIC START ===")
+        dynamic_end = content.index("# === DYNAMIC END ===")
+        dynamic_content = content[dynamic_start:dynamic_end]
+
+        assert "Reset" in dynamic_content or "reset" in dynamic_content
+
+
+# ---------------------------------------------------------------------------
+# Reset workspace button
+# ---------------------------------------------------------------------------
+
+
+class TestResetWorkspaceButton:
+    """Verify the Reset Workspace button is in the sidebar."""
+
+    def test_reset_button_in_scaffold(self) -> None:
+        """Reset button should be inside the scaffold section."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        scaffold_start = content.index("# === SCAFFOLD START ===")
+        scaffold_end = content.index("# === SCAFFOLD END ===")
+        scaffold_content = content[scaffold_start:scaffold_end]
+
+        assert "Reset Workspace" in scaffold_content
+
+    def test_reset_button_has_key(self) -> None:
+        """Reset button should have a unique key for session state."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        assert "reset_workspace" in content
+
+    def test_reset_calls_reset_function(self) -> None:
+        """Clicking reset should call the reset_dynamic_section function."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        assert "reset_dynamic_section" in content
+
+    def test_app_imports_reset_function(self) -> None:
+        """app.py should import reset_dynamic_section from dynamic_defaults."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        assert "from dynamic_defaults import reset_dynamic_section" in content
+
+    def test_reset_preserves_chat_history(self) -> None:
+        """Reset should not clear st.session_state.messages.
+
+        The reset function only rewrites app.py's dynamic section.
+        Chat history is stored in session state, which survives file rewrites
+        and Streamlit reruns.
+        """
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        scaffold_start = content.index("# === SCAFFOLD START ===")
+        scaffold_end = content.index("# === SCAFFOLD END ===")
+        scaffold_content = content[scaffold_start:scaffold_end]
+
+        # The reset button section should NOT clear messages
+        reset_idx = scaffold_content.index("Reset Workspace")
+        # Get the section around the reset button (200 chars after)
+        reset_section = scaffold_content[reset_idx : reset_idx + 400]
+
+        # Should NOT contain messages = [] or session_state.messages = []
+        assert "messages = []" not in reset_section
+        assert "messages.clear()" not in reset_section
