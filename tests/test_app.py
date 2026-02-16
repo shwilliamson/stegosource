@@ -311,3 +311,144 @@ class TestStreamlitConfig:
 
         content = Path(".streamlit/config.toml").read_text()
         assert "#1A1D26" in content
+
+
+# ---------------------------------------------------------------------------
+# Empty state and example prompts
+# ---------------------------------------------------------------------------
+
+
+class TestExamplePrompts:
+    """Verify example prompt definitions and click callback logic."""
+
+    def test_example_prompts_defined(self) -> None:
+        """EXAMPLE_PROMPTS should be a non-empty list of strings."""
+        from app import EXAMPLE_PROMPTS
+
+        assert isinstance(EXAMPLE_PROMPTS, list)
+        assert len(EXAMPLE_PROMPTS) >= 3
+        for prompt in EXAMPLE_PROMPTS:
+            assert isinstance(prompt, str)
+            assert len(prompt) > 0
+
+    def test_example_prompts_count(self) -> None:
+        """Should have 3-4 example prompts as required by the issue."""
+        from app import EXAMPLE_PROMPTS
+
+        assert 3 <= len(EXAMPLE_PROMPTS) <= 4
+
+    def test_required_prompts_present(self) -> None:
+        """Must include the prompts specified in the issue."""
+        from app import EXAMPLE_PROMPTS
+
+        assert "Show me AAPL stock for the last 3 months" in EXAMPLE_PROMPTS
+        assert "Add a date range picker" in EXAMPLE_PROMPTS
+        assert "Compare TSLA and F" in EXAMPLE_PROMPTS
+
+    def test_send_example_prompt_sets_session_state(self) -> None:
+        """Clicking an example prompt should populate session state for processing."""
+        from app import _send_example_prompt
+
+        # Use SimpleNamespace so attribute access (st.session_state.messages) works
+        from types import SimpleNamespace
+
+        mock_state = SimpleNamespace(
+            messages=[],
+            processing=False,
+            pending_prompt=None,
+        )
+
+        with patch("app.st") as mock_st:
+            mock_st.session_state = mock_state
+            _send_example_prompt("Show me AAPL stock for the last 3 months")
+
+            assert len(mock_state.messages) == 1
+            assert mock_state.messages[0] == {
+                "role": "user",
+                "content": "Show me AAPL stock for the last 3 months",
+            }
+            assert mock_state.processing is True
+            assert mock_state.pending_prompt == "Show me AAPL stock for the last 3 months"
+
+    def test_send_example_prompt_appends_to_existing_messages(self) -> None:
+        """Callback should append to existing messages, not replace them."""
+        from app import _send_example_prompt
+        from types import SimpleNamespace
+
+        existing_messages: list[dict[str, str]] = [
+            {"role": "user", "content": "hello"},
+            {"role": "assistant", "content": "hi"},
+        ]
+        mock_state = SimpleNamespace(
+            messages=existing_messages,
+            processing=False,
+            pending_prompt=None,
+        )
+
+        with patch("app.st") as mock_st:
+            mock_st.session_state = mock_state
+            _send_example_prompt("Add a date range picker")
+
+            assert len(mock_state.messages) == 3
+            assert mock_state.messages[-1] == {
+                "role": "user",
+                "content": "Add a date range picker",
+            }
+
+
+class TestEmptyStateDynamicSection:
+    """Verify the dynamic section contains the empty state UI."""
+
+    def test_dynamic_section_has_content(self) -> None:
+        """Dynamic section should not be empty — it should have the empty state."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        dynamic_start = content.index("# === DYNAMIC START ===")
+        dynamic_end = content.index("# === DYNAMIC END ===")
+        dynamic_content = content[dynamic_start:dynamic_end].strip()
+
+        # Should have more than just the marker and a comment
+        lines = [
+            line
+            for line in dynamic_content.split("\n")
+            if line.strip() and not line.strip().startswith("#")
+        ]
+        assert len(lines) > 0, "Dynamic section should contain empty state code"
+
+    def test_dynamic_section_has_example_prompts_ref(self) -> None:
+        """Dynamic section should reference EXAMPLE_PROMPTS."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        dynamic_start = content.index("# === DYNAMIC START ===")
+        dynamic_end = content.index("# === DYNAMIC END ===")
+        dynamic_content = content[dynamic_start:dynamic_end]
+
+        assert "EXAMPLE_PROMPTS" in dynamic_content
+
+    def test_dynamic_section_has_send_callback(self) -> None:
+        """Dynamic section should define the _send_example_prompt callback."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        dynamic_start = content.index("# === DYNAMIC START ===")
+        dynamic_end = content.index("# === DYNAMIC END ===")
+        dynamic_content = content[dynamic_start:dynamic_end]
+
+        assert "_send_example_prompt" in dynamic_content
+
+    def test_scaffold_not_modified(self) -> None:
+        """Scaffold section should still contain required infrastructure."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        scaffold_start = content.index("# === SCAFFOLD START ===")
+        scaffold_end = content.index("# === SCAFFOLD END ===")
+        scaffold_content = content[scaffold_start:scaffold_end]
+
+        # Verify key scaffold components are present
+        assert "st.set_page_config" in scaffold_content
+        assert "session_state" in scaffold_content
+        assert "st.sidebar" in scaffold_content
+        assert "chat_input" in scaffold_content
