@@ -239,13 +239,88 @@ def extract_assistant_text(messages: list[MessageType]) -> str:
     return "".join(parts)
 
 
+def format_tool_label(tool_name: str, tool_input: dict[str, Any]) -> tuple[str, str]:
+    """Generate a friendly label and Material icon for a tool call.
+
+    Parameters
+    ----------
+    tool_name:
+        The raw tool name from the SDK (e.g., "Edit", "Bash", "Read").
+    tool_input:
+        The tool's input parameters dict.
+
+    Returns
+    -------
+    tuple[str, str]
+        A ``(label, icon)`` pair.  The label is a human-friendly description
+        like ``"Editing app.py"`` and the icon is a Streamlit Material icon
+        string like ``":material/edit:"``.
+    """
+    path = (
+        tool_input.get("file_path")
+        or tool_input.get("path")
+        or tool_input.get("filename")
+        or ""
+    )
+    # Show only the basename for readability
+    if path:
+        path = path.rsplit("/", 1)[-1]
+
+    if tool_name in ("Write", "Edit"):
+        label = f"Editing {path}" if path else "Editing file"
+        icon = ":material/edit:"
+    elif tool_name == "Read":
+        label = f"Reading {path}" if path else "Reading file"
+        icon = ":material/description:"
+    elif tool_name == "Bash":
+        cmd = str(tool_input.get("command", tool_input.get("cmd", "")))
+        # Truncate long commands
+        summary = cmd[:60] + ("..." if len(cmd) > 60 else "")
+        label = f"Running {summary}" if summary else "Running command"
+        icon = ":material/terminal:"
+    elif tool_name in ("WebFetch", "WebSearch"):
+        label = "Fetching data"
+        icon = ":material/public:"
+    else:
+        label = f"Using {tool_name}"
+        icon = ":material/build:"
+
+    return label, icon
+
+
+_MAX_RESULT_LENGTH = 500
+"""Maximum characters to include in a tool call result summary."""
+
+
+def _truncate_result(result: Any) -> str:
+    """Truncate a tool call result to a readable summary.
+
+    Parameters
+    ----------
+    result:
+        The raw result content from a ``ToolResultBlock``.
+
+    Returns
+    -------
+    str
+        A string representation, truncated to ``_MAX_RESULT_LENGTH`` characters.
+    """
+    if result is None:
+        return ""
+    text = str(result)
+    if len(text) > _MAX_RESULT_LENGTH:
+        remaining = len(text) - _MAX_RESULT_LENGTH
+        return text[:_MAX_RESULT_LENGTH] + f"\n... ({remaining} more chars)"
+    return text
+
+
 def extract_tool_calls(
     messages: list[MessageType],
 ) -> list[dict[str, Any]]:
     """Extract tool use and result information from agent messages.
 
     Returns a list of dicts with keys ``name``, ``input``, ``result``,
-    and ``is_error`` for each tool call observed.
+    ``is_error``, ``label``, and ``icon`` for each tool call observed.
     """
     tool_uses: dict[str, dict[str, Any]] = {}
 
@@ -254,11 +329,14 @@ def extract_tool_calls(
             continue
         for block in msg.content:
             if isinstance(block, ToolUseBlock):
+                label, icon = format_tool_label(block.name, block.input)
                 tool_uses[block.id] = {
                     "name": block.name,
                     "input": block.input,
                     "result": None,
                     "is_error": False,
+                    "label": label,
+                    "icon": icon,
                 }
             elif isinstance(block, ToolResultBlock):
                 if block.tool_use_id in tool_uses:

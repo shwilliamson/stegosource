@@ -14,10 +14,12 @@ from agent import (
     AgentQueryError,
     _build_prompt,
     _make_options,
+    _truncate_result,
     _validate_api_key,
     extract_assistant_text,
     extract_result,
     extract_tool_calls,
+    format_tool_label,
     query_agent,
     run_agent_sync,
 )
@@ -267,12 +269,14 @@ class TestExtractToolCalls:
         assert calls[0]["name"] == "Read"
         assert calls[0]["input"] == {"path": "app.py"}
         assert calls[0]["result"] is None
+        assert calls[0]["label"] == "Reading app.py"
+        assert calls[0]["icon"] == ":material/description:"
 
     def test_tool_call_with_result(self) -> None:
         messages = [
             _make_assistant_message(
                 [
-                    ToolUseBlock(id="t1", name="Edit", input={"file": "app.py"}),
+                    ToolUseBlock(id="t1", name="Edit", input={"file_path": "app.py"}),
                     ToolResultBlock(
                         tool_use_id="t1",
                         content="File edited successfully",
@@ -285,12 +289,14 @@ class TestExtractToolCalls:
         assert len(calls) == 1
         assert calls[0]["result"] == "File edited successfully"
         assert calls[0]["is_error"] is False
+        assert calls[0]["label"] == "Editing app.py"
+        assert calls[0]["icon"] == ":material/edit:"
 
     def test_tool_call_with_error(self) -> None:
         messages = [
             _make_assistant_message(
                 [
-                    ToolUseBlock(id="t1", name="Bash", input={"cmd": "bad"}),
+                    ToolUseBlock(id="t1", name="Bash", input={"command": "bad"}),
                     ToolResultBlock(
                         tool_use_id="t1",
                         content="Command failed",
@@ -301,6 +307,8 @@ class TestExtractToolCalls:
         ]
         calls = extract_tool_calls(messages)
         assert calls[0]["is_error"] is True
+        assert calls[0]["label"] == "Running bad"
+        assert calls[0]["icon"] == ":material/terminal:"
 
     def test_multiple_tool_calls(self) -> None:
         messages = [
@@ -316,6 +324,117 @@ class TestExtractToolCalls:
 
     def test_empty_messages(self) -> None:
         assert extract_tool_calls([]) == []
+
+
+# ---------------------------------------------------------------------------
+# Format tool label tests
+# ---------------------------------------------------------------------------
+
+
+class TestFormatToolLabel:
+    """Verify the format_tool_label helper produces friendly labels and icons."""
+
+    def test_edit_with_path(self) -> None:
+        label, icon = format_tool_label("Edit", {"file_path": "/src/app.py"})
+        assert label == "Editing app.py"
+        assert icon == ":material/edit:"
+
+    def test_write_with_path(self) -> None:
+        label, icon = format_tool_label("Write", {"file_path": "output.txt"})
+        assert label == "Editing output.txt"
+        assert icon == ":material/edit:"
+
+    def test_read_with_path(self) -> None:
+        label, icon = format_tool_label("Read", {"path": "config.toml"})
+        assert label == "Reading config.toml"
+        assert icon == ":material/description:"
+
+    def test_read_with_file_path(self) -> None:
+        label, icon = format_tool_label("Read", {"file_path": "/a/b/c.py"})
+        assert label == "Reading c.py"
+        assert icon == ":material/description:"
+
+    def test_bash_with_command(self) -> None:
+        label, icon = format_tool_label("Bash", {"command": "pip install plotly"})
+        assert label == "Running pip install plotly"
+        assert icon == ":material/terminal:"
+
+    def test_bash_with_long_command(self) -> None:
+        long_cmd = "a" * 100
+        label, icon = format_tool_label("Bash", {"command": long_cmd})
+        assert label.startswith("Running ")
+        assert "..." in label
+        assert len(label) < 80  # label is reasonably short
+
+    def test_bash_without_command(self) -> None:
+        label, icon = format_tool_label("Bash", {})
+        assert label == "Running command"
+        assert icon == ":material/terminal:"
+
+    def test_web_fetch(self) -> None:
+        label, icon = format_tool_label("WebFetch", {"url": "https://example.com"})
+        assert label == "Fetching data"
+        assert icon == ":material/public:"
+
+    def test_web_search(self) -> None:
+        label, icon = format_tool_label("WebSearch", {"query": "test"})
+        assert label == "Fetching data"
+        assert icon == ":material/public:"
+
+    def test_unknown_tool(self) -> None:
+        label, icon = format_tool_label("CustomTool", {"x": 1})
+        assert label == "Using CustomTool"
+        assert icon == ":material/build:"
+
+    def test_edit_without_path(self) -> None:
+        label, icon = format_tool_label("Edit", {})
+        assert label == "Editing file"
+        assert icon == ":material/edit:"
+
+    def test_read_without_path(self) -> None:
+        label, icon = format_tool_label("Read", {})
+        assert label == "Reading file"
+        assert icon == ":material/description:"
+
+    def test_path_shows_basename_only(self) -> None:
+        label, _ = format_tool_label("Read", {"path": "/very/long/path/to/file.py"})
+        assert label == "Reading file.py"
+        assert "/very/long" not in label
+
+
+# ---------------------------------------------------------------------------
+# Truncate result tests
+# ---------------------------------------------------------------------------
+
+
+class TestTruncateResult:
+    """Verify the _truncate_result helper."""
+
+    def test_none_returns_empty(self) -> None:
+        assert _truncate_result(None) == ""
+
+    def test_short_string_unchanged(self) -> None:
+        assert _truncate_result("hello") == "hello"
+
+    def test_long_string_truncated(self) -> None:
+        long_text = "x" * 600
+        result = _truncate_result(long_text)
+        assert len(result) < 600
+        assert "more chars" in result
+        assert result.startswith("x" * 500)
+
+    def test_exactly_max_length(self) -> None:
+        text = "y" * 500
+        result = _truncate_result(text)
+        assert result == text  # should not be truncated
+
+    def test_non_string_converted(self) -> None:
+        result = _truncate_result(42)
+        assert result == "42"
+
+    def test_list_converted(self) -> None:
+        result = _truncate_result([1, 2, 3])
+        assert result == "[1, 2, 3]"
 
 
 class TestExtractResult:

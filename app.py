@@ -20,7 +20,9 @@ import streamlit as st
 from agent import (
     AgentConfigError,
     AgentError,
+    _truncate_result,
     extract_assistant_text,
+    extract_tool_calls,
     query_agent_streaming,
 )
 
@@ -71,12 +73,17 @@ def _get_or_create_event_loop() -> asyncio.AbstractEventLoop:
 def _stream_agent_response(
     prompt: str,
     history: list[dict[str, str]],
-) -> tuple[str, list[MessageType]]:
-    """Query the agent and stream the response, returning the full text and messages.
+) -> tuple[str, list[MessageType], list[dict[str, object]]]:
+    """Query the agent and stream the response, returning text, messages, and tool calls.
 
     This function bridges the async ``query_agent_streaming`` generator into
-    Streamlit's synchronous execution model.  It collects all messages and
-    extracts the concatenated assistant text.
+    Streamlit's synchronous execution model.  It collects all messages,
+    extracts the concatenated assistant text, and extracts tool call data.
+
+    Returns
+    -------
+    tuple[str, list[MessageType], list[dict[str, object]]]
+        A tuple of ``(assistant_text, raw_messages, tool_calls)``.
     """
     all_messages: list[MessageType] = []
 
@@ -88,7 +95,44 @@ def _stream_agent_response(
     loop.run_until_complete(_collect())
 
     text = extract_assistant_text(all_messages)
-    return text, all_messages
+    tool_calls = extract_tool_calls(all_messages)
+    return text, all_messages, tool_calls
+
+
+def _render_tool_calls(tool_calls: list[dict[str, object]]) -> None:
+    """Render tool calls as expanders within the current chat message context.
+
+    Each tool call is displayed as a collapsed ``st.expander`` with the
+    friendly label and Material icon.  The expanded content shows key
+    parameters and a truncated result summary.
+    """
+    for tc in tool_calls:
+        label = str(tc.get("label", tc.get("name", "Tool call")))
+        icon = str(tc.get("icon", ":material/build:"))
+        is_error = bool(tc.get("is_error", False))
+
+        if is_error:
+            label = f"Failed: {label}"
+
+        with st.expander(label, expanded=False, icon=icon):
+            # Show key input parameters
+            tool_input = tc.get("input")
+            if tool_input and isinstance(tool_input, dict):
+                # Show a compact representation of key parameters
+                params = {k: v for k, v in tool_input.items() if v is not None}
+                if params:
+                    st.caption("Parameters")
+                    st.code(
+                        "\n".join(f"{k}: {v}" for k, v in params.items()),
+                        language="yaml",
+                    )
+
+            # Show result summary
+            result = tc.get("result")
+            if result is not None:
+                st.caption("Result")
+                result_text = _truncate_result(result)
+                st.code(result_text, language="text")
 
 
 # ---------------------------------------------------------------------------
@@ -103,6 +147,9 @@ with st.sidebar:
         avatar = "\N{SAUROPOD}" if msg["role"] == "assistant" else None
         with st.chat_message(msg["role"], avatar=avatar):
             st.markdown(msg["content"])
+            # Render tool calls for assistant messages (if any)
+            if msg["role"] == "assistant" and msg.get("tool_calls"):
+                _render_tool_calls(msg["tool_calls"])
 
     # Handle streaming response if processing
     if st.session_state.processing and st.session_state.pending_prompt is not None:
@@ -115,12 +162,18 @@ with st.sidebar:
         with st.chat_message("assistant", avatar="\N{SAUROPOD}"):
             message_placeholder = st.empty()
             message_placeholder.markdown("Thinking\u2026")
+            tool_calls_data: list[dict[str, object]] = []
 
             try:
-                full_text, _ = _stream_agent_response(user_prompt, conversation_history)
+                full_text, _, tool_calls_data = _stream_agent_response(
+                    user_prompt, conversation_history
+                )
                 if not full_text.strip():
                     full_text = "I processed your request."
                 message_placeholder.markdown(full_text)
+                # Render tool calls inline after the text
+                if tool_calls_data:
+                    _render_tool_calls(tool_calls_data)
             except AgentConfigError:
                 full_text = ""
                 message_placeholder.empty()
@@ -139,7 +192,11 @@ with st.sidebar:
 
         if full_text:
             st.session_state.messages.append(
-                {"role": "assistant", "content": full_text}
+                {
+                    "role": "assistant",
+                    "content": full_text,
+                    "tool_calls": tool_calls_data,
+                }
             )
 
         st.session_state.processing = False
