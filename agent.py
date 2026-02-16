@@ -114,9 +114,7 @@ def _make_options() -> ClaudeAgentOptions:
 # Core async query function
 # ---------------------------------------------------------------------------
 
-MessageType = (
-    AssistantMessage | ResultMessage | SystemMessage | StreamEvent
-)
+MessageType = AssistantMessage | ResultMessage | SystemMessage | StreamEvent
 
 
 async def query_agent(
@@ -218,9 +216,7 @@ def run_agent_sync(
     list[MessageType]
         All messages received from the agent.
     """
-    return asyncio.run(
-        query_agent(user_message, conversation_history)
-    )
+    return asyncio.run(query_agent(user_message, conversation_history))
 
 
 # ---------------------------------------------------------------------------
@@ -267,9 +263,7 @@ def extract_tool_calls(
             elif isinstance(block, ToolResultBlock):
                 if block.tool_use_id in tool_uses:
                     tool_uses[block.tool_use_id]["result"] = block.content
-                    tool_uses[block.tool_use_id]["is_error"] = (
-                        block.is_error or False
-                    )
+                    tool_uses[block.tool_use_id]["is_error"] = block.is_error or False
 
     return list(tool_uses.values())
 

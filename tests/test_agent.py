@@ -59,7 +59,10 @@ class TestSystemPrompt:
         assert "plotly_chart" in SYSTEM_PROMPT
 
     def test_mentions_hot_reload(self) -> None:
-        assert "hot-reload" in SYSTEM_PROMPT.lower() or "hot reload" in SYSTEM_PROMPT.lower()
+        assert (
+            "hot-reload" in SYSTEM_PROMPT.lower()
+            or "hot reload" in SYSTEM_PROMPT.lower()
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -212,20 +215,24 @@ class TestExtractAssistantText:
 
     def test_multiple_text_blocks(self) -> None:
         messages = [
-            _make_assistant_message([
-                TextBlock(text="Hello "),
-                TextBlock(text="world"),
-            ])
+            _make_assistant_message(
+                [
+                    TextBlock(text="Hello "),
+                    TextBlock(text="world"),
+                ]
+            )
         ]
         assert extract_assistant_text(messages) == "Hello world"
 
     def test_ignores_tool_blocks(self) -> None:
         messages = [
-            _make_assistant_message([
-                TextBlock(text="Before"),
-                ToolUseBlock(id="t1", name="Read", input={"path": "x.py"}),
-                TextBlock(text="After"),
-            ])
+            _make_assistant_message(
+                [
+                    TextBlock(text="Before"),
+                    ToolUseBlock(id="t1", name="Read", input={"path": "x.py"}),
+                    TextBlock(text="After"),
+                ]
+            )
         ]
         assert extract_assistant_text(messages) == "BeforeAfter"
 
@@ -249,9 +256,11 @@ class TestExtractToolCalls:
 
     def test_single_tool_call(self) -> None:
         messages = [
-            _make_assistant_message([
-                ToolUseBlock(id="t1", name="Read", input={"path": "app.py"}),
-            ])
+            _make_assistant_message(
+                [
+                    ToolUseBlock(id="t1", name="Read", input={"path": "app.py"}),
+                ]
+            )
         ]
         calls = extract_tool_calls(messages)
         assert len(calls) == 1
@@ -261,14 +270,16 @@ class TestExtractToolCalls:
 
     def test_tool_call_with_result(self) -> None:
         messages = [
-            _make_assistant_message([
-                ToolUseBlock(id="t1", name="Edit", input={"file": "app.py"}),
-                ToolResultBlock(
-                    tool_use_id="t1",
-                    content="File edited successfully",
-                    is_error=False,
-                ),
-            ])
+            _make_assistant_message(
+                [
+                    ToolUseBlock(id="t1", name="Edit", input={"file": "app.py"}),
+                    ToolResultBlock(
+                        tool_use_id="t1",
+                        content="File edited successfully",
+                        is_error=False,
+                    ),
+                ]
+            )
         ]
         calls = extract_tool_calls(messages)
         assert len(calls) == 1
@@ -277,24 +288,28 @@ class TestExtractToolCalls:
 
     def test_tool_call_with_error(self) -> None:
         messages = [
-            _make_assistant_message([
-                ToolUseBlock(id="t1", name="Bash", input={"cmd": "bad"}),
-                ToolResultBlock(
-                    tool_use_id="t1",
-                    content="Command failed",
-                    is_error=True,
-                ),
-            ])
+            _make_assistant_message(
+                [
+                    ToolUseBlock(id="t1", name="Bash", input={"cmd": "bad"}),
+                    ToolResultBlock(
+                        tool_use_id="t1",
+                        content="Command failed",
+                        is_error=True,
+                    ),
+                ]
+            )
         ]
         calls = extract_tool_calls(messages)
         assert calls[0]["is_error"] is True
 
     def test_multiple_tool_calls(self) -> None:
         messages = [
-            _make_assistant_message([
-                ToolUseBlock(id="t1", name="Read", input={"path": "a.py"}),
-                ToolUseBlock(id="t2", name="Write", input={"path": "b.py"}),
-            ])
+            _make_assistant_message(
+                [
+                    ToolUseBlock(id="t1", name="Read", input={"path": "a.py"}),
+                    ToolUseBlock(id="t2", name="Write", input={"path": "b.py"}),
+                ]
+            )
         ]
         calls = extract_tool_calls(messages)
         assert len(calls) == 2
