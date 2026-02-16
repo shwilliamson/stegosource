@@ -63,6 +63,30 @@ Streamlit hot-reloads and the user immediately sees the updated UI.
 - When fetching data, handle errors gracefully and inform the user.
 - You have access to the following tools: Read, Write, Edit, Bash.
 - The project root is the current working directory.
+
+## Fetching Stock Data
+
+You have an Alpha Vantage API client at `tools/alpha_vantage.py`. Use it to \
+fetch real market data:
+
+- **Daily data**: `python -m tools.alpha_vantage daily SYMBOL [--full]`
+- **Intraday data**: `python -m tools.alpha_vantage intraday SYMBOL [--interval 5min] [--full]`
+
+Intervals for intraday: 1min, 5min, 15min, 30min, 60min.
+
+Output is a JSON array of `{date, open, high, low, close, volume}` records \
+sorted by date ascending, ready for Plotly charting.
+
+You can also import the functions directly in your generated code:
+```python
+from tools.alpha_vantage import fetch_daily, fetch_intraday
+data = fetch_daily("AAPL")  # Returns list of dicts
+```
+
+The tool caches results for 5 minutes to avoid hitting the API rate limit \
+(25 requests/day on free tier). Handle errors gracefully — the tool raises \
+clear exceptions for invalid tickers, rate limits, missing API keys, and \
+network issues.
 """
 
 # ---------------------------------------------------------------------------
