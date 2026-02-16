@@ -163,6 +163,96 @@ class TestSystemPrompt:
         assert "Chart Checklist" in SYSTEM_PROMPT
         assert "use_container_width=True" in SYSTEM_PROMPT
 
+    # --- Form and Widget Generation Tests ---
+
+    def test_contains_form_widget_section(self) -> None:
+        """System prompt must include a Form and Widget Generation section."""
+        assert "Form and Widget Generation Patterns" in SYSTEM_PROMPT
+
+    def test_contains_widget_key_guidance(self) -> None:
+        """System prompt must instruct use of key parameters for widgets."""
+        assert "key=" in SYSTEM_PROMPT
+        assert "session state persistence" in SYSTEM_PROMPT.lower()
+
+    def test_contains_date_range_picker_example(self) -> None:
+        """System prompt must include a date range picker example."""
+        assert "Date Range Picker" in SYSTEM_PROMPT
+        assert "st.date_input" in SYSTEM_PROMPT
+        assert "date_start" in SYSTEM_PROMPT
+
+    def test_contains_dropdown_selector_example(self) -> None:
+        """System prompt must include a dropdown selector example."""
+        assert "Dropdown Selector" in SYSTEM_PROMPT
+        assert "st.selectbox" in SYSTEM_PROMPT
+        assert "chart_type_selector" in SYSTEM_PROMPT
+
+    def test_contains_text_input_example(self) -> None:
+        """System prompt must include a text input example."""
+        assert "Text Input" in SYSTEM_PROMPT
+        assert "st.text_input" in SYSTEM_PROMPT
+        assert "symbol_input" in SYSTEM_PROMPT
+
+    def test_contains_multiselect_example(self) -> None:
+        """System prompt must include a multi-select example."""
+        assert "Multi-Select" in SYSTEM_PROMPT
+        assert "st.multiselect" in SYSTEM_PROMPT
+        assert "compare_symbols" in SYSTEM_PROMPT
+
+    def test_contains_form_submit_pattern(self) -> None:
+        """System prompt must include st.form with st.form_submit_button pattern."""
+        assert "st.form(" in SYSTEM_PROMPT
+        assert "st.form_submit_button" in SYSTEM_PROMPT
+        assert "stock_form" in SYSTEM_PROMPT or "form_symbol" in SYSTEM_PROMPT
+
+    def test_contains_widget_modify_remove_guidance(self) -> None:
+        """System prompt must include guidance on modifying/removing controls."""
+        assert "Modifying or Removing Controls" in SYSTEM_PROMPT
+
+    def test_contains_widget_checklist(self) -> None:
+        """System prompt must include a widget checklist."""
+        assert "Widget Checklist" in SYSTEM_PROMPT
+        assert "unique `key` parameter" in SYSTEM_PROMPT
+
+    def test_widget_examples_use_error_handling(self) -> None:
+        """Widget examples must include error handling with specific exceptions."""
+        # The form section should contain try/except patterns
+        form_section_start = SYSTEM_PROMPT.index("Form and Widget Generation")
+        form_section = SYSTEM_PROMPT[form_section_start:]
+        assert "except InvalidTickerError" in form_section
+        assert "except RateLimitError" in form_section
+        assert "except MissingApiKeyError" in form_section
+        assert "except ApiError" in form_section
+
+    def test_widget_examples_use_chart_theme(self) -> None:
+        """Widget examples must apply STEGO_LAYOUT for chart theming."""
+        form_section_start = SYSTEM_PROMPT.index("Form and Widget Generation")
+        form_section = SYSTEM_PROMPT[form_section_start:]
+        assert "STEGO_LAYOUT" in form_section
+
+    def test_widget_examples_use_alpha_vantage(self) -> None:
+        """Widget examples must use fetch_daily from alpha_vantage."""
+        form_section_start = SYSTEM_PROMPT.index("Form and Widget Generation")
+        form_section = SYSTEM_PROMPT[form_section_start:]
+        assert "fetch_daily" in form_section
+
+    def test_widget_examples_connect_to_charts(self) -> None:
+        """Widget examples must show widgets driving chart updates."""
+        form_section_start = SYSTEM_PROMPT.index("Form and Widget Generation")
+        form_section = SYSTEM_PROMPT[form_section_start:]
+        assert "st.plotly_chart" in form_section
+
+    def test_form_example_has_columns_layout(self) -> None:
+        """Form examples should use st.columns for side-by-side widget layout."""
+        form_section_start = SYSTEM_PROMPT.index("Form and Widget Generation")
+        form_section = SYSTEM_PROMPT[form_section_start:]
+        assert "st.columns" in form_section
+
+    def test_widget_rerun_guidance(self) -> None:
+        """System prompt must mention Streamlit rerun behaviour for widgets."""
+        form_section_start = SYSTEM_PROMPT.index("Form and Widget Generation")
+        form_section = SYSTEM_PROMPT[form_section_start:]
+        assert "rerun" in form_section.lower()
+
 
 # ---------------------------------------------------------------------------
 # Options factory tests
