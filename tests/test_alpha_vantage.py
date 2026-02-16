@@ -218,12 +218,16 @@ class TestParseTimeSeries:
             _parse_time_series(raw, "Time Series (Daily)")
 
     def test_raises_on_rate_limit_note(self) -> None:
-        raw = {"Note": "Thank you for using Alpha Vantage! Our call frequency limit is 5 calls per minute."}
+        raw = {
+            "Note": "Thank you for using Alpha Vantage! Our call frequency limit is 5 calls per minute."
+        }
         with pytest.raises(RateLimitError, match="rate limit"):
             _parse_time_series(raw, "Time Series (Daily)")
 
     def test_raises_on_rate_limit_information(self) -> None:
-        raw = {"Information": "Thank you for using Alpha Vantage! Please visit our premium plan for higher call frequency and more features."}
+        raw = {
+            "Information": "Thank you for using Alpha Vantage! Please visit our premium plan for higher call frequency and more features."
+        }
         with pytest.raises(RateLimitError):
             _parse_time_series(raw, "Time Series (Daily)")
 
@@ -268,7 +272,9 @@ class TestFetchDaily:
 
         with (
             patch.dict(os.environ, api_key_env),
-            patch("tools.alpha_vantage.requests.get", return_value=mock_response) as mock_get,
+            patch(
+                "tools.alpha_vantage.requests.get", return_value=mock_response
+            ) as mock_get,
         ):
             fetch_daily("AAPL", outputsize="full")
             mock_get.assert_called_once()
@@ -286,10 +292,14 @@ class TestFetchDaily:
 
         with (
             patch.dict(os.environ, api_key_env),
-            patch("tools.alpha_vantage.requests.get", return_value=mock_response) as mock_get,
+            patch(
+                "tools.alpha_vantage.requests.get", return_value=mock_response
+            ) as mock_get,
         ):
             fetch_daily("aapl")
-            params = mock_get.call_args.kwargs.get("params") or mock_get.call_args[1].get("params")
+            params = mock_get.call_args.kwargs.get("params") or mock_get.call_args[
+                1
+            ].get("params")
             assert params["symbol"] == "AAPL"
 
     def test_uses_cache(self, api_key_env: dict[str, str]) -> None:
@@ -299,7 +309,9 @@ class TestFetchDaily:
 
         with (
             patch.dict(os.environ, api_key_env),
-            patch("tools.alpha_vantage.requests.get", return_value=mock_response) as mock_get,
+            patch(
+                "tools.alpha_vantage.requests.get", return_value=mock_response
+            ) as mock_get,
         ):
             # First call should hit the API
             data1 = fetch_daily("AAPL")
@@ -409,10 +421,14 @@ class TestFetchIntraday:
 
         with (
             patch.dict(os.environ, api_key_env),
-            patch("tools.alpha_vantage.requests.get", return_value=mock_response) as mock_get,
+            patch(
+                "tools.alpha_vantage.requests.get", return_value=mock_response
+            ) as mock_get,
         ):
             fetch_intraday("MSFT", interval="15min")
-            params = mock_get.call_args.kwargs.get("params") or mock_get.call_args[1].get("params")
+            params = mock_get.call_args.kwargs.get("params") or mock_get.call_args[
+                1
+            ].get("params")
             assert params["function"] == "TIME_SERIES_INTRADAY"
             assert params["symbol"] == "MSFT"
             assert params["interval"] == "15min"
@@ -444,7 +460,9 @@ class TestFetchIntraday:
 
         with (
             patch.dict(os.environ, api_key_env),
-            patch("tools.alpha_vantage.requests.get", return_value=mock_response) as mock_get,
+            patch(
+                "tools.alpha_vantage.requests.get", return_value=mock_response
+            ) as mock_get,
         ):
             data1 = fetch_intraday("AAPL", interval="5min")
             data2 = fetch_intraday("AAPL", interval="5min")

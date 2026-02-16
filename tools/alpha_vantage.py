@@ -229,9 +229,7 @@ def _parse_time_series(
                 "Please wait and try again."
             )
         if "premium" in info.lower() or "subscribe" in info.lower():
-            raise RateLimitError(
-                f"Alpha Vantage API limit reached: {info}"
-            )
+            raise RateLimitError(f"Alpha Vantage API limit reached: {info}")
 
     if time_series_key not in raw_data:
         raise InvalidTickerError(
@@ -439,7 +437,9 @@ def fetch_intraday(
 def _cli_daily(args: list[str]) -> None:
     """Handle the 'daily' subcommand."""
     if not args:
-        print("Error: Please provide a stock symbol. Usage: daily AAPL", file=sys.stderr)
+        print(
+            "Error: Please provide a stock symbol. Usage: daily AAPL", file=sys.stderr
+        )
         sys.exit(1)
 
     symbol = args[0]
@@ -516,7 +516,10 @@ def main() -> None:
     elif command == "intraday":
         _cli_intraday(args)
     else:
-        print(f"Error: Unknown command '{command}'. Use 'daily' or 'intraday'.", file=sys.stderr)
+        print(
+            f"Error: Unknown command '{command}'. Use 'daily' or 'intraday'.",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
 
