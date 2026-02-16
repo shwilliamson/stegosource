@@ -66,6 +66,66 @@ class TestSystemPrompt:
             or "hot reload" in SYSTEM_PROMPT.lower()
         )
 
+    def test_contains_chart_generation_section(self) -> None:
+        """System prompt must include chart generation patterns."""
+        assert "Chart Generation Patterns" in SYSTEM_PROMPT
+
+    def test_contains_line_chart_example(self) -> None:
+        """System prompt must include a line chart example with px.line."""
+        assert "px.line" in SYSTEM_PROMPT
+
+    def test_contains_candlestick_chart_example(self) -> None:
+        """System prompt must include a candlestick chart example."""
+        assert "go.Candlestick" in SYSTEM_PROMPT
+
+    def test_contains_stego_layout_reference(self) -> None:
+        """System prompt must reference the STEGO_LAYOUT theme template."""
+        assert "STEGO_LAYOUT" in SYSTEM_PROMPT
+
+    def test_contains_chart_theme_import(self) -> None:
+        """System prompt must show how to import from chart_theme module."""
+        assert "from chart_theme import" in SYSTEM_PROMPT
+
+    def test_contains_alpha_vantage_import_pattern(self) -> None:
+        """System prompt must show inline import of fetch_daily."""
+        assert "from tools.alpha_vantage import fetch_daily" in SYSTEM_PROMPT
+
+    def test_contains_error_handling_pattern(self) -> None:
+        """System prompt chart examples must include try/except error handling."""
+        assert "except Exception" in SYSTEM_PROMPT
+        assert "st.error" in SYSTEM_PROMPT
+
+    def test_contains_chart_title_guidance(self) -> None:
+        """System prompt must mention chart titles."""
+        assert "title=" in SYSTEM_PROMPT
+
+    def test_contains_axis_label_guidance(self) -> None:
+        """System prompt must mention axis labels."""
+        assert "xaxis_title" in SYSTEM_PROMPT or "labels=" in SYSTEM_PROMPT
+
+    def test_contains_caption_pattern(self) -> None:
+        """System prompt must include st.caption for data source attribution."""
+        assert "st.caption" in SYSTEM_PROMPT
+
+    def test_contains_candlestick_colors(self) -> None:
+        """System prompt must reference candlestick up/down colors."""
+        assert "CANDLESTICK_UP" in SYSTEM_PROMPT
+        assert "CANDLESTICK_DOWN" in SYSTEM_PROMPT
+
+    def test_contains_multi_symbol_example(self) -> None:
+        """System prompt must include a multi-symbol comparison example."""
+        assert "Multi-Symbol Comparison" in SYSTEM_PROMPT
+        assert "add_trace" in SYSTEM_PROMPT
+
+    def test_contains_modify_chart_guidance(self) -> None:
+        """System prompt must include guidance on modifying existing charts."""
+        assert "Modifying Existing Charts" in SYSTEM_PROMPT
+
+    def test_contains_chart_checklist(self) -> None:
+        """System prompt must include a pre-save chart checklist."""
+        assert "Chart Checklist" in SYSTEM_PROMPT
+        assert "use_container_width=True" in SYSTEM_PROMPT
+
 
 # ---------------------------------------------------------------------------
 # Options factory tests

@@ -87,6 +87,148 @@ The tool caches results for 5 minutes to avoid hitting the API rate limit \
 (25 requests/day on free tier). Handle errors gracefully — the tool raises \
 clear exceptions for invalid tickers, rate limits, missing API keys, and \
 network issues.
+
+## Chart Generation Patterns
+
+When the user asks for a chart, write self-contained code into the dynamic \
+section of `app.py`. The code must work on its own when Streamlit re-runs \
+the file. Always include data fetching, error handling, and chart creation \
+in one block.
+
+### Plotly Theme Template
+
+A shared theme module is available at `chart_theme.py`. Always import and \
+apply it so charts match the app's dark theme:
+
+```python
+from chart_theme import STEGO_LAYOUT, CANDLESTICK_UP, CANDLESTICK_DOWN
+```
+
+Apply the layout first, then set chart-specific properties like title and \
+axis labels in a second call. This avoids conflicts with the template keys:
+
+```python
+fig.update_layout(**STEGO_LAYOUT)
+fig.update_layout(title_text="My chart", xaxis_title="Date", yaxis_title="Price (USD)")
+```
+
+For `px.line()` and similar Plotly Express calls, you can pass `title=` \
+directly to the constructor, then apply the theme after.
+
+### Line Chart Example
+
+For time series data (e.g., stock closing prices), use Plotly Express:
+
+```python
+import plotly.express as px
+from chart_theme import STEGO_LAYOUT
+from tools.alpha_vantage import fetch_daily
+
+try:
+    data = fetch_daily("AAPL")
+    fig = px.line(
+        data,
+        x="date",
+        y="close",
+        title="AAPL — Daily closing price",
+        labels={"date": "Date", "close": "Price (USD)"},
+    )
+    fig.update_layout(**STEGO_LAYOUT)
+    st.plotly_chart(fig, use_container_width=True)
+    st.caption("Source: Alpha Vantage · Daily time series")
+except Exception as exc:
+    st.error(f"Failed to load chart data: {exc}")
+```
+
+### Candlestick Chart Example
+
+For OHLC data, use Plotly Graph Objects:
+
+```python
+import plotly.graph_objects as go
+from chart_theme import CANDLESTICK_DOWN, CANDLESTICK_UP, STEGO_LAYOUT
+from tools.alpha_vantage import fetch_daily
+
+try:
+    data = fetch_daily("AAPL")
+    fig = go.Figure(
+        data=[
+            go.Candlestick(
+                x=[r["date"] for r in data],
+                open=[r["open"] for r in data],
+                high=[r["high"] for r in data],
+                low=[r["low"] for r in data],
+                close=[r["close"] for r in data],
+                increasing=dict(line=dict(color=CANDLESTICK_UP), fillcolor=CANDLESTICK_UP),
+                decreasing=dict(line=dict(color=CANDLESTICK_DOWN), fillcolor=CANDLESTICK_DOWN),
+                name="AAPL",
+            )
+        ]
+    )
+    fig.update_layout(**STEGO_LAYOUT)
+    fig.update_layout(
+        title_text="AAPL — Candlestick chart",
+        xaxis_title="Date",
+        yaxis_title="Price (USD)",
+        xaxis_rangeslider_visible=False,
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    st.caption("Source: Alpha Vantage · OHLC daily data")
+except Exception as exc:
+    st.error(f"Failed to load chart data: {exc}")
+```
+
+### Multi-Symbol Comparison Example
+
+```python
+import plotly.graph_objects as go
+from chart_theme import STEGO_LAYOUT
+from tools.alpha_vantage import fetch_daily
+
+symbols = ["AAPL", "GOOGL"]
+fig = go.Figure()
+for symbol in symbols:
+    try:
+        data = fetch_daily(symbol)
+        fig.add_trace(
+            go.Scatter(
+                x=[r["date"] for r in data],
+                y=[r["close"] for r in data],
+                mode="lines",
+                name=symbol,
+            )
+        )
+    except Exception as exc:
+        st.warning(f"Could not load {symbol}: {exc}")
+
+fig.update_layout(**STEGO_LAYOUT)
+fig.update_layout(
+    title_text="Stock price comparison",
+    xaxis_title="Date",
+    yaxis_title="Price (USD)",
+)
+st.plotly_chart(fig, use_container_width=True)
+```
+
+### Modifying Existing Charts
+
+When the user asks to change a chart (e.g., "switch to candlestick" or \
+"add MSFT to the comparison"), read the current dynamic section first with \
+the Read tool, then use the Edit tool to replace the relevant code block. \
+Keep the surrounding code intact. Do NOT rewrite the entire dynamic section \
+unless the user explicitly requests it.
+
+### Chart Checklist
+
+Before saving your chart code, verify:
+1. Imports are at the top of the dynamic section
+2. Data fetching is wrapped in `try/except`
+3. Chart has a descriptive title
+4. Axes have labels (xaxis_title, yaxis_title or labels={})
+5. `st.plotly_chart(fig, use_container_width=True)` is used
+6. `st.caption()` is added below the chart describing the data source
+7. `STEGO_LAYOUT` template is applied via `fig.update_layout(**STEGO_LAYOUT)`
+8. Candlestick up color is `#00E676`, down color is `#E040A0`
 """
 
 # ---------------------------------------------------------------------------
