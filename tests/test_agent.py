@@ -1,0 +1,426 @@
+"""Tests for the Stegosource agent module."""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+
+from agent import (
+    SYSTEM_PROMPT,
+    AgentConfigError,
+    AgentQueryError,
+    _build_prompt,
+    _make_options,
+    _validate_api_key,
+    extract_assistant_text,
+    extract_result,
+    extract_tool_calls,
+    query_agent,
+    run_agent_sync,
+)
+from claude_agent_sdk.types import (
+    AssistantMessage,
+    ResultMessage,
+    TextBlock,
+    ToolResultBlock,
+    ToolUseBlock,
+)
+
+
+# ---------------------------------------------------------------------------
+# System prompt tests
+# ---------------------------------------------------------------------------
+
+
+class TestSystemPrompt:
+    """Verify the system prompt contains required instructions."""
+
+    def test_defines_agent_role(self) -> None:
+        assert "Stegosource" in SYSTEM_PROMPT
+        assert "data visualization" in SYSTEM_PROMPT.lower()
+
+    def test_instructs_scaffold_preservation(self) -> None:
+        assert "SCAFFOLD START" in SYSTEM_PROMPT
+        assert "SCAFFOLD END" in SYSTEM_PROMPT
+        assert "NEVER modify" in SYSTEM_PROMPT or "NEVER edit" in SYSTEM_PROMPT
+
+    def test_defines_dynamic_section(self) -> None:
+        assert "DYNAMIC START" in SYSTEM_PROMPT
+        assert "DYNAMIC END" in SYSTEM_PROMPT
+
+    def test_mentions_available_tools(self) -> None:
+        for tool in ("Read", "Write", "Edit", "Bash"):
+            assert tool in SYSTEM_PROMPT
+
+    def test_mentions_plotly(self) -> None:
+        assert "plotly_chart" in SYSTEM_PROMPT
+
+    def test_mentions_hot_reload(self) -> None:
+        assert "hot-reload" in SYSTEM_PROMPT.lower() or "hot reload" in SYSTEM_PROMPT.lower()
+
+
+# ---------------------------------------------------------------------------
+# Options factory tests
+# ---------------------------------------------------------------------------
+
+
+class TestMakeOptions:
+    """Verify ClaudeAgentOptions are configured correctly."""
+
+    def test_system_prompt_is_set(self) -> None:
+        opts = _make_options()
+        assert opts.system_prompt == SYSTEM_PROMPT
+
+    def test_tools_preset(self) -> None:
+        opts = _make_options()
+        assert opts.tools == {"type": "preset", "preset": "claude_code"}
+
+    def test_permission_mode(self) -> None:
+        opts = _make_options()
+        assert opts.permission_mode == "bypassPermissions"
+
+    def test_streaming_enabled(self) -> None:
+        opts = _make_options()
+        assert opts.include_partial_messages is True
+
+    def test_cwd_is_project_root(self) -> None:
+        opts = _make_options()
+        # cwd should be the parent of agent.py (project root)
+        expected = str(Path(__file__).resolve().parent.parent)
+        assert opts.cwd == expected
+
+    def test_model_is_set(self) -> None:
+        opts = _make_options()
+        assert opts.model == "sonnet"
+
+
+# ---------------------------------------------------------------------------
+# Prompt builder tests
+# ---------------------------------------------------------------------------
+
+
+class TestBuildPrompt:
+    """Verify conversation history is correctly formatted into a prompt."""
+
+    def test_empty_history(self) -> None:
+        prompt = _build_prompt("Hello", [])
+        assert prompt == "[User]: Hello"
+
+    def test_single_turn_history(self) -> None:
+        history = [
+            {"role": "user", "content": "Hi"},
+            {"role": "assistant", "content": "Hello!"},
+        ]
+        prompt = _build_prompt("How are you?", history)
+        assert "[User]: Hi" in prompt
+        assert "[Assistant]: Hello!" in prompt
+        assert "[User]: How are you?" in prompt
+
+    def test_multi_turn_history(self) -> None:
+        history = [
+            {"role": "user", "content": "First"},
+            {"role": "assistant", "content": "Response 1"},
+            {"role": "user", "content": "Second"},
+            {"role": "assistant", "content": "Response 2"},
+        ]
+        prompt = _build_prompt("Third", history)
+        lines = prompt.split("\n\n")
+        assert len(lines) == 5  # 4 history + 1 new message
+
+    def test_preserves_order(self) -> None:
+        history = [
+            {"role": "user", "content": "A"},
+            {"role": "assistant", "content": "B"},
+        ]
+        prompt = _build_prompt("C", history)
+        idx_a = prompt.index("[User]: A")
+        idx_b = prompt.index("[Assistant]: B")
+        idx_c = prompt.index("[User]: C")
+        assert idx_a < idx_b < idx_c
+
+
+# ---------------------------------------------------------------------------
+# API key validation tests
+# ---------------------------------------------------------------------------
+
+
+class TestValidateApiKey:
+    """Verify API key validation behavior."""
+
+    def test_raises_when_missing(self) -> None:
+        with patch.dict(os.environ, {}, clear=True):
+            # Ensure ANTHROPIC_API_KEY is not present
+            os.environ.pop("ANTHROPIC_API_KEY", None)
+            with pytest.raises(AgentConfigError, match="ANTHROPIC_API_KEY"):
+                _validate_api_key()
+
+    def test_raises_when_empty(self) -> None:
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": ""}):
+            with pytest.raises(AgentConfigError, match="ANTHROPIC_API_KEY"):
+                _validate_api_key()
+
+    def test_raises_when_whitespace(self) -> None:
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "   "}):
+            with pytest.raises(AgentConfigError, match="ANTHROPIC_API_KEY"):
+                _validate_api_key()
+
+    def test_passes_when_set(self) -> None:
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-test-key"}):
+            _validate_api_key()  # Should not raise
+
+
+# ---------------------------------------------------------------------------
+# Message extraction tests
+# ---------------------------------------------------------------------------
+
+
+def _make_assistant_message(
+    content: list[TextBlock | ToolUseBlock | ToolResultBlock],
+) -> AssistantMessage:
+    """Helper to create an AssistantMessage with given content blocks."""
+    return AssistantMessage(content=content, model="claude-sonnet-4-20250514")
+
+
+def _make_result_message(
+    is_error: bool = False,
+    cost: float | None = 0.001,
+) -> ResultMessage:
+    """Helper to create a ResultMessage."""
+    return ResultMessage(
+        subtype="result",
+        duration_ms=100,
+        duration_api_ms=80,
+        is_error=is_error,
+        num_turns=1,
+        session_id="test",
+        total_cost_usd=cost,
+        usage=None,
+        result=None,
+        structured_output=None,
+    )
+
+
+class TestExtractAssistantText:
+    """Verify text extraction from assistant messages."""
+
+    def test_single_text_block(self) -> None:
+        messages = [_make_assistant_message([TextBlock(text="Hello world")])]
+        assert extract_assistant_text(messages) == "Hello world"
+
+    def test_multiple_text_blocks(self) -> None:
+        messages = [
+            _make_assistant_message([
+                TextBlock(text="Hello "),
+                TextBlock(text="world"),
+            ])
+        ]
+        assert extract_assistant_text(messages) == "Hello world"
+
+    def test_ignores_tool_blocks(self) -> None:
+        messages = [
+            _make_assistant_message([
+                TextBlock(text="Before"),
+                ToolUseBlock(id="t1", name="Read", input={"path": "x.py"}),
+                TextBlock(text="After"),
+            ])
+        ]
+        assert extract_assistant_text(messages) == "BeforeAfter"
+
+    def test_empty_messages(self) -> None:
+        assert extract_assistant_text([]) == ""
+
+    def test_ignores_result_messages(self) -> None:
+        messages = [_make_result_message()]
+        assert extract_assistant_text(messages) == ""
+
+    def test_multiple_assistant_messages(self) -> None:
+        messages = [
+            _make_assistant_message([TextBlock(text="First ")]),
+            _make_assistant_message([TextBlock(text="Second")]),
+        ]
+        assert extract_assistant_text(messages) == "First Second"
+
+
+class TestExtractToolCalls:
+    """Verify tool call extraction."""
+
+    def test_single_tool_call(self) -> None:
+        messages = [
+            _make_assistant_message([
+                ToolUseBlock(id="t1", name="Read", input={"path": "app.py"}),
+            ])
+        ]
+        calls = extract_tool_calls(messages)
+        assert len(calls) == 1
+        assert calls[0]["name"] == "Read"
+        assert calls[0]["input"] == {"path": "app.py"}
+        assert calls[0]["result"] is None
+
+    def test_tool_call_with_result(self) -> None:
+        messages = [
+            _make_assistant_message([
+                ToolUseBlock(id="t1", name="Edit", input={"file": "app.py"}),
+                ToolResultBlock(
+                    tool_use_id="t1",
+                    content="File edited successfully",
+                    is_error=False,
+                ),
+            ])
+        ]
+        calls = extract_tool_calls(messages)
+        assert len(calls) == 1
+        assert calls[0]["result"] == "File edited successfully"
+        assert calls[0]["is_error"] is False
+
+    def test_tool_call_with_error(self) -> None:
+        messages = [
+            _make_assistant_message([
+                ToolUseBlock(id="t1", name="Bash", input={"cmd": "bad"}),
+                ToolResultBlock(
+                    tool_use_id="t1",
+                    content="Command failed",
+                    is_error=True,
+                ),
+            ])
+        ]
+        calls = extract_tool_calls(messages)
+        assert calls[0]["is_error"] is True
+
+    def test_multiple_tool_calls(self) -> None:
+        messages = [
+            _make_assistant_message([
+                ToolUseBlock(id="t1", name="Read", input={"path": "a.py"}),
+                ToolUseBlock(id="t2", name="Write", input={"path": "b.py"}),
+            ])
+        ]
+        calls = extract_tool_calls(messages)
+        assert len(calls) == 2
+
+    def test_empty_messages(self) -> None:
+        assert extract_tool_calls([]) == []
+
+
+class TestExtractResult:
+    """Verify ResultMessage extraction."""
+
+    def test_returns_result(self) -> None:
+        result = _make_result_message()
+        messages = [
+            _make_assistant_message([TextBlock(text="done")]),
+            result,
+        ]
+        assert extract_result(messages) is result
+
+    def test_returns_none_when_missing(self) -> None:
+        messages = [_make_assistant_message([TextBlock(text="hi")])]
+        assert extract_result(messages) is None
+
+    def test_empty_messages(self) -> None:
+        assert extract_result([]) is None
+
+
+# ---------------------------------------------------------------------------
+# Async query tests (mocked)
+# ---------------------------------------------------------------------------
+
+
+class TestQueryAgent:
+    """Verify the async query function behavior with mocked SDK."""
+
+    @pytest.mark.asyncio
+    async def test_raises_without_api_key(self) -> None:
+        with patch.dict(os.environ, {}, clear=True):
+            os.environ.pop("ANTHROPIC_API_KEY", None)
+            with pytest.raises(AgentConfigError):
+                await query_agent("Hello")
+
+    @pytest.mark.asyncio
+    async def test_calls_query_with_correct_args(self) -> None:
+        """Verify that the SDK query function is called with proper options."""
+
+        async def mock_query(*, prompt: str, options: object):
+            yield _make_assistant_message([TextBlock(text="Hi")])
+            yield _make_result_message()
+
+        with (
+            patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-test"}),
+            patch("agent.query", side_effect=mock_query),
+        ):
+            messages = await query_agent("Hello")
+            assert len(messages) == 2
+            assert isinstance(messages[0], AssistantMessage)
+            assert isinstance(messages[1], ResultMessage)
+
+    @pytest.mark.asyncio
+    async def test_wraps_sdk_errors(self) -> None:
+        """SDK errors should be wrapped in AgentQueryError."""
+
+        async def mock_query(*, prompt: str, options: object):
+            raise RuntimeError("SDK failure")
+            # Make it an async generator
+            yield  # type: ignore[misc]  # pragma: no cover
+
+        with (
+            patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-test"}),
+            patch("agent.query", side_effect=mock_query),
+        ):
+            with pytest.raises(AgentQueryError, match="SDK failure"):
+                await query_agent("Hello")
+
+    @pytest.mark.asyncio
+    async def test_passes_conversation_history(self) -> None:
+        """Conversation history should be included in the prompt."""
+        captured_prompt = None
+
+        async def mock_query(*, prompt: str, options: object):
+            nonlocal captured_prompt
+            captured_prompt = prompt
+            yield _make_result_message()
+
+        history = [
+            {"role": "user", "content": "prev question"},
+            {"role": "assistant", "content": "prev answer"},
+        ]
+        with (
+            patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-test"}),
+            patch("agent.query", side_effect=mock_query),
+        ):
+            await query_agent("new question", history)
+            assert captured_prompt is not None
+            assert "prev question" in captured_prompt
+            assert "prev answer" in captured_prompt
+            assert "new question" in captured_prompt
+
+
+# ---------------------------------------------------------------------------
+# Sync wrapper test
+# ---------------------------------------------------------------------------
+
+
+class TestRunAgentSync:
+    """Verify the synchronous wrapper."""
+
+    def test_raises_without_api_key(self) -> None:
+        with patch.dict(os.environ, {}, clear=True):
+            os.environ.pop("ANTHROPIC_API_KEY", None)
+            with pytest.raises(AgentConfigError):
+                run_agent_sync("Hello")
+
+    def test_returns_messages(self) -> None:
+        """run_agent_sync should return the same messages as query_agent."""
+
+        async def mock_query(*, prompt: str, options: object):
+            yield _make_assistant_message([TextBlock(text="sync test")])
+            yield _make_result_message()
+
+        with (
+            patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-test"}),
+            patch("agent.query", side_effect=mock_query),
+        ):
+            messages = run_agent_sync("Hello")
+            assert len(messages) == 2
+            text = extract_assistant_text(messages)
+            assert text == "sync test"
