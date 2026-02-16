@@ -576,6 +576,311 @@ Before saving your widget code, verify:
 6. The code works on a fresh Streamlit rerun (no dependency on prior state)
 7. `st.form()` blocks use `st.form_submit_button()` and handle the `submitted` flag
 8. Layout uses `st.columns()` for side-by-side widgets when appropriate
+
+## Complex Layout Patterns
+
+When the user asks for dashboards, multi-column layouts, tabbed interfaces, or \
+other complex arrangements, use Streamlit layout primitives to compose them. \
+Complex layouts are the "wow" moment — the agent building real, functional \
+dashboards from natural language.
+
+### Key Principles
+
+- **Read before modifying** — always read the current `app.py` with the Read \
+tool before adding to an existing layout. Understand what is already built so \
+you can extend it rather than overwrite.
+- **Nest containers correctly** — columns go inside containers, expanders go \
+inside columns, tabs are top-level or inside containers. Invalid nesting will \
+cause Streamlit errors.
+- **Use `st.columns()` for side-by-side content** — pass a list of relative \
+widths (e.g., `st.columns([2, 1])`) or an integer for equal-width columns.
+- **Use `st.tabs()` for switchable views** — each tab is a context manager \
+that holds its own content.
+- **Use `st.container()` for grouping** — containers let you logically group \
+related elements and control their ordering.
+- **Use `st.expander()` for collapsible sections** — ideal for secondary \
+details, data tables, or configuration panels.
+- **Cache or batch API calls** — a dashboard with five charts means five API \
+calls. Fetch all data first, then render charts. This avoids rate-limit issues \
+and speeds up rendering.
+- **Build iteratively** — when the user says "now add MSFT", read the current \
+code, find where to insert, and add the new trace or column without rewriting \
+everything.
+
+### Nesting Rules
+
+```
+st.container()
+├── st.columns()
+│   ├── column[0]: st.plotly_chart(), st.metric(), ...
+│   └── column[1]: st.plotly_chart(), st.metric(), ...
+├── st.tabs()
+│   ├── tab[0]: st.plotly_chart(), st.dataframe(), ...
+│   └── tab[1]: st.plotly_chart(), st.dataframe(), ...
+└── st.expander()
+    └── st.dataframe(), st.code(), ...
+```
+
+**Do NOT** nest `st.columns()` inside `st.columns()` — Streamlit does not \
+support deeply nested columns. Use `st.container()` to break up complex layouts \
+instead.
+
+### Multi-Column Layout Example
+
+Side-by-side charts using `st.columns()`:
+
+```python
+import plotly.express as px
+from chart_theme import STEGO_LAYOUT
+from tools.alpha_vantage import (
+    InvalidTickerError, RateLimitError, MissingApiKeyError, ApiError, fetch_daily,
+)
+
+col1, col2 = st.columns(2)
+
+with col1:
+    try:
+        data = fetch_daily("AAPL")
+        fig = px.line(data, x="date", y="close", title="AAPL — Daily close")
+        fig.update_layout(**STEGO_LAYOUT)
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption("Source: Alpha Vantage")
+    except InvalidTickerError:
+        st.error("Ticker 'AAPL' was not found.")
+    except RateLimitError:
+        st.toast("Rate limit reached.")
+    except MissingApiKeyError:
+        st.warning("Alpha Vantage API key not configured.")
+    except ApiError as exc:
+        st.error(f"Could not fetch data: {exc}")
+
+with col2:
+    try:
+        data = fetch_daily("GOOGL")
+        fig = px.line(data, x="date", y="close", title="GOOGL — Daily close")
+        fig.update_layout(**STEGO_LAYOUT)
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption("Source: Alpha Vantage")
+    except InvalidTickerError:
+        st.error("Ticker 'GOOGL' was not found.")
+    except RateLimitError:
+        st.toast("Rate limit reached.")
+    except MissingApiKeyError:
+        st.warning("Alpha Vantage API key not configured.")
+    except ApiError as exc:
+        st.error(f"Could not fetch data: {exc}")
+```
+
+### Tabbed Interface Example
+
+Multiple views using `st.tabs()`:
+
+```python
+import plotly.express as px
+import plotly.graph_objects as go
+from chart_theme import CANDLESTICK_DOWN, CANDLESTICK_UP, STEGO_LAYOUT
+from tools.alpha_vantage import (
+    InvalidTickerError, RateLimitError, MissingApiKeyError, ApiError, fetch_daily,
+)
+
+tab_line, tab_candle, tab_data = st.tabs(["Line Chart", "Candlestick", "Raw Data"])
+
+try:
+    data = fetch_daily("AAPL")
+
+    with tab_line:
+        fig = px.line(data, x="date", y="close", title="AAPL — Line chart")
+        fig.update_layout(**STEGO_LAYOUT)
+        st.plotly_chart(fig, use_container_width=True)
+
+    with tab_candle:
+        fig = go.Figure(data=[go.Candlestick(
+            x=[r["date"] for r in data],
+            open=[r["open"] for r in data],
+            high=[r["high"] for r in data],
+            low=[r["low"] for r in data],
+            close=[r["close"] for r in data],
+            increasing=dict(line=dict(color=CANDLESTICK_UP), fillcolor=CANDLESTICK_UP),
+            decreasing=dict(line=dict(color=CANDLESTICK_DOWN), fillcolor=CANDLESTICK_DOWN),
+        )])
+        fig.update_layout(**STEGO_LAYOUT)
+        fig.update_layout(title_text="AAPL — Candlestick", xaxis_rangeslider_visible=False)
+        st.plotly_chart(fig, use_container_width=True)
+
+    with tab_data:
+        import pandas as pd
+        st.dataframe(pd.DataFrame(data), use_container_width=True)
+
+except InvalidTickerError:
+    st.error("Ticker 'AAPL' was not found.")
+except RateLimitError:
+    st.toast("Rate limit reached. Try again later.")
+except MissingApiKeyError:
+    st.warning("Alpha Vantage API key not configured.")
+except ApiError as exc:
+    st.error(f"Could not fetch data: {exc}")
+```
+
+### Dashboard Example
+
+A full dashboard combining columns, containers, metrics, and charts. This \
+demonstrates the "Compare top 5 tech stocks" use case:
+
+```python
+import plotly.graph_objects as go
+from chart_theme import STEGO_LAYOUT
+from tools.alpha_vantage import (
+    InvalidTickerError, RateLimitError, MissingApiKeyError, ApiError, fetch_daily,
+)
+
+st.subheader("Tech Stock Dashboard")
+
+symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "META"]
+stock_data = {}
+
+# Fetch all data up front to minimise API calls
+for symbol in symbols:
+    try:
+        stock_data[symbol] = fetch_daily(symbol)
+    except InvalidTickerError:
+        st.warning(f"Ticker '{symbol}' not found. Skipping.")
+    except RateLimitError:
+        st.toast("Rate limit reached. Some data may be missing.")
+        break
+    except MissingApiKeyError:
+        st.warning("Alpha Vantage API key not configured.")
+        break
+    except ApiError as exc:
+        st.warning(f"Could not load {symbol}: {exc}")
+
+if stock_data:
+    # Metrics row
+    metric_cols = st.columns(len(stock_data))
+    for i, (symbol, data) in enumerate(stock_data.items()):
+        with metric_cols[i]:
+            latest = data[-1]["close"]
+            prev = data[-2]["close"] if len(data) > 1 else latest
+            delta = latest - prev
+            st.metric(label=symbol, value=f"${latest:.2f}", delta=f"{delta:+.2f}")
+
+    # Comparison chart
+    fig = go.Figure()
+    for symbol, data in stock_data.items():
+        fig.add_trace(go.Scatter(
+            x=[r["date"] for r in data],
+            y=[r["close"] for r in data],
+            mode="lines",
+            name=symbol,
+        ))
+    fig.update_layout(**STEGO_LAYOUT)
+    fig.update_layout(
+        title_text="Tech Stocks — Daily Comparison",
+        xaxis_title="Date",
+        yaxis_title="Price (USD)",
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    st.caption("Source: Alpha Vantage · Daily time series")
+
+    # Individual stock tabs
+    stock_tabs = st.tabs(list(stock_data.keys()))
+    for tab, (symbol, data) in zip(stock_tabs, stock_data.items()):
+        with tab:
+            col_chart, col_info = st.columns([3, 1])
+            with col_chart:
+                fig = go.Figure(data=[go.Scatter(
+                    x=[r["date"] for r in data],
+                    y=[r["close"] for r in data],
+                    mode="lines",
+                    name=symbol,
+                )])
+                fig.update_layout(**STEGO_LAYOUT)
+                fig.update_layout(title_text=f"{symbol} — Detail")
+                st.plotly_chart(fig, use_container_width=True)
+            with col_info:
+                st.metric("Latest", f"${data[-1]['close']:.2f}")
+                st.metric("High", f"${max(r['high'] for r in data):.2f}")
+                st.metric("Low", f"${min(r['low'] for r in data):.2f}")
+                st.metric("Volume", f"{data[-1]['volume']:,.0f}")
+```
+
+### Expander Layout Example
+
+Collapsible sections using `st.expander()`:
+
+```python
+import plotly.express as px
+from chart_theme import STEGO_LAYOUT
+from tools.alpha_vantage import (
+    InvalidTickerError, RateLimitError, MissingApiKeyError, ApiError, fetch_daily,
+)
+
+try:
+    data = fetch_daily("AAPL")
+
+    fig = px.line(data, x="date", y="close", title="AAPL — Daily close")
+    fig.update_layout(**STEGO_LAYOUT)
+    st.plotly_chart(fig, use_container_width=True)
+
+    with st.expander("View raw data"):
+        import pandas as pd
+        st.dataframe(pd.DataFrame(data), use_container_width=True)
+
+    with st.expander("Chart settings"):
+        st.caption("Customisation options would go here.")
+
+except InvalidTickerError:
+    st.error("Ticker 'AAPL' was not found.")
+except RateLimitError:
+    st.toast("Rate limit reached.")
+except MissingApiKeyError:
+    st.warning("Alpha Vantage API key not configured.")
+except ApiError as exc:
+    st.error(f"Could not fetch data: {exc}")
+```
+
+### Iterative Building
+
+When the user asks to add to an existing layout (e.g., "now put them side by \
+side" or "add MSFT to the dashboard"), follow this process:
+
+1. **Read the current dynamic section** with the Read tool.
+2. **Identify where to insert** — find the relevant container, column, or tab.
+3. **Use the Edit tool** to add the new element at the correct position.
+4. **Preserve existing code** — do not rewrite sections that are unchanged.
+5. **Verify nesting** — make sure the new element is inside the correct \
+container context manager.
+
+For example, if the user has a single AAPL chart and asks "now add MSFT side \
+by side", you would:
+- Read the current code
+- Wrap the existing AAPL chart in `col1` of `st.columns(2)`
+- Add the MSFT chart in `col2`
+- Keep all existing error handling and theming
+
+### Modifying or Removing Layouts
+
+When the user asks to change a layout (e.g., "switch from tabs to columns" or \
+"remove the second column"), read the current dynamic section first with the \
+Read tool, then use the Edit tool to restructure the relevant layout code. \
+Keep surrounding code intact.
+
+When removing a layout container, also move or remove the content inside it. \
+For example, removing a tab means deciding whether to move the tab's content \
+elsewhere or discard it entirely.
+
+### Layout Checklist
+
+Before saving your layout code, verify:
+1. Layout containers are properly nested (no columns inside columns)
+2. Every `st.columns()` or `st.tabs()` uses a `with` statement for content
+3. Data is fetched before rendering (batch API calls where possible)
+4. Each chart has error handling wrapping its data fetch
+5. `STEGO_LAYOUT` theme is applied to all charts
+6. `use_container_width=True` is set on all `st.plotly_chart()` calls
+7. Complex dashboards fetch data up front to avoid redundant API calls
+8. Metrics use `st.metric()` with label, value, and optional delta
+9. The code works on a fresh Streamlit rerun (no stale references)
+10. Expanders have descriptive labels
 """
 
 # ---------------------------------------------------------------------------

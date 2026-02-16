@@ -253,6 +253,141 @@ class TestSystemPrompt:
         form_section = SYSTEM_PROMPT[form_section_start:]
         assert "rerun" in form_section.lower()
 
+    # --- Complex Layout Patterns Tests ---
+
+    def test_contains_complex_layout_section(self) -> None:
+        """System prompt must include a Complex Layout Patterns section."""
+        assert "Complex Layout Patterns" in SYSTEM_PROMPT
+
+    def test_contains_columns_guidance(self) -> None:
+        """System prompt must document st.columns() for side-by-side layouts."""
+        layout_start = SYSTEM_PROMPT.index("Complex Layout Patterns")
+        layout_section = SYSTEM_PROMPT[layout_start:]
+        assert "st.columns()" in layout_section
+
+    def test_contains_tabs_guidance(self) -> None:
+        """System prompt must document st.tabs() for tabbed interfaces."""
+        layout_start = SYSTEM_PROMPT.index("Complex Layout Patterns")
+        layout_section = SYSTEM_PROMPT[layout_start:]
+        assert "st.tabs()" in layout_section
+
+    def test_contains_container_guidance(self) -> None:
+        """System prompt must document st.container() for grouping."""
+        layout_start = SYSTEM_PROMPT.index("Complex Layout Patterns")
+        layout_section = SYSTEM_PROMPT[layout_start:]
+        assert "st.container()" in layout_section
+
+    def test_contains_expander_guidance(self) -> None:
+        """System prompt must document st.expander() for collapsible sections."""
+        layout_start = SYSTEM_PROMPT.index("Complex Layout Patterns")
+        layout_section = SYSTEM_PROMPT[layout_start:]
+        assert "st.expander()" in layout_section
+
+    def test_contains_multi_column_example(self) -> None:
+        """System prompt must include a multi-column layout example."""
+        assert "Multi-Column Layout Example" in SYSTEM_PROMPT
+
+    def test_contains_tabbed_interface_example(self) -> None:
+        """System prompt must include a tabbed interface example."""
+        assert "Tabbed Interface Example" in SYSTEM_PROMPT
+
+    def test_contains_dashboard_example(self) -> None:
+        """System prompt must include a dashboard example."""
+        assert "Dashboard Example" in SYSTEM_PROMPT
+
+    def test_contains_expander_example(self) -> None:
+        """System prompt must include an expander layout example."""
+        assert "Expander Layout Example" in SYSTEM_PROMPT
+
+    def test_layout_examples_use_error_handling(self) -> None:
+        """Layout examples must include error handling with specific exceptions."""
+        layout_start = SYSTEM_PROMPT.index("Complex Layout Patterns")
+        layout_section = SYSTEM_PROMPT[layout_start:]
+        assert "except InvalidTickerError" in layout_section
+        assert "except RateLimitError" in layout_section
+        assert "except MissingApiKeyError" in layout_section
+        assert "except ApiError" in layout_section
+
+    def test_layout_examples_use_chart_theme(self) -> None:
+        """Layout examples must apply STEGO_LAYOUT for chart theming."""
+        layout_start = SYSTEM_PROMPT.index("Complex Layout Patterns")
+        layout_section = SYSTEM_PROMPT[layout_start:]
+        assert "STEGO_LAYOUT" in layout_section
+
+    def test_layout_examples_use_alpha_vantage(self) -> None:
+        """Layout examples must use fetch_daily from alpha_vantage."""
+        layout_start = SYSTEM_PROMPT.index("Complex Layout Patterns")
+        layout_section = SYSTEM_PROMPT[layout_start:]
+        assert "fetch_daily" in layout_section
+
+    def test_contains_layout_checklist(self) -> None:
+        """System prompt must include a layout checklist."""
+        assert "Layout Checklist" in SYSTEM_PROMPT
+
+    def test_contains_iterative_building_guidance(self) -> None:
+        """System prompt must include iterative building guidance."""
+        assert "Iterative Building" in SYSTEM_PROMPT
+
+    def test_contains_nesting_rules(self) -> None:
+        """System prompt must include nesting rules for layout containers."""
+        layout_start = SYSTEM_PROMPT.index("Complex Layout Patterns")
+        layout_section = SYSTEM_PROMPT[layout_start:]
+        assert "Nesting Rules" in layout_section
+        assert "nest" in layout_section.lower()
+
+    def test_contains_modify_remove_layouts(self) -> None:
+        """System prompt must include guidance on modifying/removing layouts."""
+        assert "Modifying or Removing Layouts" in SYSTEM_PROMPT
+
+    def test_dashboard_example_has_metrics(self) -> None:
+        """Dashboard example must include st.metric() for key data points."""
+        layout_start = SYSTEM_PROMPT.index("Dashboard Example")
+        dashboard_section = SYSTEM_PROMPT[
+            layout_start : SYSTEM_PROMPT.index("Expander Layout Example")
+        ]
+        assert "st.metric" in dashboard_section
+
+    def test_dashboard_example_batches_api_calls(self) -> None:
+        """Dashboard example must fetch data up front to minimise API calls."""
+        layout_start = SYSTEM_PROMPT.index("Dashboard Example")
+        dashboard_section = SYSTEM_PROMPT[
+            layout_start : SYSTEM_PROMPT.index("Expander Layout Example")
+        ]
+        assert "stock_data" in dashboard_section
+
+    def test_layout_examples_use_plotly_chart(self) -> None:
+        """Layout examples must use st.plotly_chart with use_container_width."""
+        layout_start = SYSTEM_PROMPT.index("Complex Layout Patterns")
+        layout_section = SYSTEM_PROMPT[layout_start:]
+        assert "st.plotly_chart" in layout_section
+        assert "use_container_width=True" in layout_section
+
+    def test_tabbed_example_has_multiple_tabs(self) -> None:
+        """Tabbed interface example must show multiple tabs."""
+        layout_start = SYSTEM_PROMPT.index("Tabbed Interface Example")
+        tab_section = SYSTEM_PROMPT[
+            layout_start : SYSTEM_PROMPT.index("Dashboard Example")
+        ]
+        assert "st.tabs(" in tab_section
+
+    def test_iterative_building_mentions_read_tool(self) -> None:
+        """Iterative building guidance must mention reading current code."""
+        layout_start = SYSTEM_PROMPT.index("Iterative Building")
+        iterative_section = SYSTEM_PROMPT[layout_start:]
+        assert "Read tool" in iterative_section or "Read" in iterative_section
+
+    def test_layout_checklist_has_nesting_check(self) -> None:
+        """Layout checklist must verify proper nesting."""
+        layout_start = SYSTEM_PROMPT.index("Layout Checklist")
+        checklist_section = SYSTEM_PROMPT[layout_start:]
+        assert "nest" in checklist_section.lower()
+
+    def test_performance_guidance_for_dashboards(self) -> None:
+        """System prompt must include performance guidance for dashboards."""
+        layout_start = SYSTEM_PROMPT.index("Complex Layout Patterns")
+        layout_section = SYSTEM_PROMPT[layout_start:]
+        assert "rate" in layout_section.lower() or "api call" in layout_section.lower()
+
 
 # ---------------------------------------------------------------------------
 # Options factory tests
