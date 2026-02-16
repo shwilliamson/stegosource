@@ -118,9 +118,10 @@ class TestStreamAgentResponse:
         with patch("app.query_agent_streaming", side_effect=mock_streaming):
             from app import _stream_agent_response
 
-            text, messages = _stream_agent_response("test", [])
+            text, messages, tool_calls = _stream_agent_response("test", [])
             assert text == "Hello from agent"
             assert len(messages) == 1
+            assert tool_calls == []
 
     def test_empty_response_returns_empty_string(self) -> None:
         """If agent returns no text blocks, text should be empty."""
@@ -148,9 +149,10 @@ class TestStreamAgentResponse:
         with patch("app.query_agent_streaming", side_effect=mock_streaming):
             from app import _stream_agent_response
 
-            text, messages = _stream_agent_response("test", [])
+            text, messages, tool_calls = _stream_agent_response("test", [])
             assert text == ""
             assert len(messages) == 1
+            assert tool_calls == []
 
     def test_multiple_text_blocks_concatenated(self) -> None:
         """Multiple text blocks should be concatenated."""
@@ -175,9 +177,50 @@ class TestStreamAgentResponse:
         with patch("app.query_agent_streaming", side_effect=mock_streaming):
             from app import _stream_agent_response
 
-            text, messages = _stream_agent_response("test", [])
+            text, messages, tool_calls = _stream_agent_response("test", [])
             assert text == "Part 1 Part 2"
             assert len(messages) == 2
+            assert tool_calls == []
+
+    def test_returns_tool_calls(self) -> None:
+        """Should extract tool calls from messages."""
+        from claude_agent_sdk.types import (
+            AssistantMessage,
+            TextBlock,
+            ToolResultBlock,
+            ToolUseBlock,
+        )
+
+        fake_msg = AssistantMessage(
+            content=[
+                TextBlock(text="Let me edit that."),
+                ToolUseBlock(id="t1", name="Edit", input={"file_path": "app.py"}),
+                ToolResultBlock(
+                    tool_use_id="t1",
+                    content="File edited successfully",
+                    is_error=False,
+                ),
+            ],
+            model="claude-sonnet-4-20250514",
+        )
+
+        async def mock_streaming(
+            user_message: str,
+            conversation_history: list[dict[str, str]] | None = None,
+        ):
+            yield fake_msg
+
+        with patch("app.query_agent_streaming", side_effect=mock_streaming):
+            from app import _stream_agent_response
+
+            text, messages, tool_calls = _stream_agent_response("test", [])
+            assert text == "Let me edit that."
+            assert len(tool_calls) == 1
+            assert tool_calls[0]["name"] == "Edit"
+            assert tool_calls[0]["label"] == "Editing app.py"
+            assert tool_calls[0]["icon"] == ":material/edit:"
+            assert tool_calls[0]["result"] == "File edited successfully"
+            assert tool_calls[0]["is_error"] is False
 
 
 # ---------------------------------------------------------------------------
@@ -368,7 +411,9 @@ class TestExamplePrompts:
                 "content": "Show me AAPL stock for the last 3 months",
             }
             assert mock_state.processing is True
-            assert mock_state.pending_prompt == "Show me AAPL stock for the last 3 months"
+            assert (
+                mock_state.pending_prompt == "Show me AAPL stock for the last 3 months"
+            )
 
     def test_send_example_prompt_appends_to_existing_messages(self) -> None:
         """Callback should append to existing messages, not replace them."""
@@ -452,3 +497,64 @@ class TestEmptyStateDynamicSection:
         assert "session_state" in scaffold_content
         assert "st.sidebar" in scaffold_content
         assert "chat_input" in scaffold_content
+
+
+# ---------------------------------------------------------------------------
+# Tool call display in chat
+# ---------------------------------------------------------------------------
+
+
+class TestToolCallDisplay:
+    """Verify tool call rendering and storage in chat messages."""
+
+    def test_assistant_message_stores_tool_calls(self) -> None:
+        """Assistant messages should include tool_calls list."""
+        msg = {
+            "role": "assistant",
+            "content": "Done.",
+            "tool_calls": [
+                {
+                    "name": "Edit",
+                    "label": "Editing app.py",
+                    "icon": ":material/edit:",
+                    "input": {"file_path": "app.py"},
+                    "result": "OK",
+                    "is_error": False,
+                }
+            ],
+        }
+        assert msg["role"] == "assistant"
+        assert len(msg["tool_calls"]) == 1
+        assert msg["tool_calls"][0]["label"] == "Editing app.py"
+
+    def test_assistant_message_without_tool_calls(self) -> None:
+        """Assistant messages without tool calls should still work."""
+        msg = {"role": "assistant", "content": "Hello", "tool_calls": []}
+        assert msg.get("tool_calls") == []
+
+    def test_render_tool_calls_function_exists(self) -> None:
+        """The _render_tool_calls function should be importable from app."""
+        from app import _render_tool_calls
+
+        assert callable(_render_tool_calls)
+
+    def test_scaffold_imports_tool_call_helpers(self) -> None:
+        """Scaffold should import extract_tool_calls and _truncate_result."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        assert "extract_tool_calls" in content
+        assert "_truncate_result" in content
+
+    def test_scaffold_renders_tool_calls_in_history(self) -> None:
+        """Scaffold should render tool_calls when replaying chat history."""
+        from pathlib import Path
+
+        content = Path("app.py").read_text()
+        scaffold_start = content.index("# === SCAFFOLD START ===")
+        scaffold_end = content.index("# === SCAFFOLD END ===")
+        scaffold_content = content[scaffold_start:scaffold_end]
+
+        # Should check for tool_calls in message rendering
+        assert "tool_calls" in scaffold_content
+        assert "_render_tool_calls" in scaffold_content
