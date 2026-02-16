@@ -105,6 +105,13 @@ claude --dangerously-skip-permissions
 streamlit run app.py --server.runOnSave=true
 ```
 
+### Accessing the App
+
+Port 8501 is automatically forwarded by the codespace. After starting Streamlit:
+
+- **VS Code in browser**: A notification will appear to open the app, or go to the **Ports** tab and click the forwarded URL for port 8501
+- **SSH**: Run `gh codespace ports forward 8501:8501 -c <codespace-name>` in a local terminal, then open http://localhost:8501
+
 ## License
 
 MIT

@@ -5,6 +5,13 @@
     "ghcr.io/devcontainers/features/node:1": {},
     "ghcr.io/anthropics/devcontainer-features/claude-code:1": {}
   },
+  "forwardPorts": [8501],
+  "portsAttributes": {
+    "8501": {
+      "label": "Stegosource",
+      "onAutoForward": "openBrowser"
+    }
+  },
   "postCreateCommand": "sudo apt-get update || true && sudo apt-get install -y tmux && curl -LsSf https://astral.sh/uv/install.sh | sh && uv pip install --system -e .",
   "customizations": {
     "codespaces": {
