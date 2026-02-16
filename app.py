@@ -161,4 +161,75 @@ with st.sidebar:
 # === DYNAMIC START ===
 # Agent-generated UI goes here. The agent may freely add, modify, or remove
 # any Streamlit or Plotly code in this section.
+
+# ---------------------------------------------------------------------------
+# Default empty state — shown until the agent modifies this section
+# ---------------------------------------------------------------------------
+
+EXAMPLE_PROMPTS: list[str] = [
+    "Show me AAPL stock for the last 3 months",
+    "Add a date range picker",
+    "Compare TSLA and F",
+    "Create a candlestick chart for GOOGL",
+]
+
+
+def _send_example_prompt(prompt_text: str) -> None:
+    """Callback for example prompt buttons.
+
+    Populates the chat with the selected prompt and triggers processing.
+    """
+    st.session_state.messages.append({"role": "user", "content": prompt_text})
+    st.session_state.processing = True
+    st.session_state.pending_prompt = prompt_text
+
+
+# Centre the empty state content in the main area
+_left_spacer, _center_col, _right_spacer = st.columns([1, 2, 1])
+
+with _center_col:
+    st.image("logo.jpeg", width=280)
+    st.caption("Dynamic Data Visualization Agent")
+    st.write(
+        "Ask Stegosource to fetch financial data, build interactive charts, "
+        "and create dashboards — all through natural conversation."
+    )
+
+    # 2x2 grid of example prompt cards
+    _row1_left, _row1_right = st.columns(2)
+    _row2_left, _row2_right = st.columns(2)
+
+    with _row1_left:
+        st.button(
+            EXAMPLE_PROMPTS[0],
+            key="example_prompt_0",
+            use_container_width=True,
+            on_click=_send_example_prompt,
+            args=(EXAMPLE_PROMPTS[0],),
+        )
+    with _row1_right:
+        st.button(
+            EXAMPLE_PROMPTS[1],
+            key="example_prompt_1",
+            use_container_width=True,
+            on_click=_send_example_prompt,
+            args=(EXAMPLE_PROMPTS[1],),
+        )
+    with _row2_left:
+        st.button(
+            EXAMPLE_PROMPTS[2],
+            key="example_prompt_2",
+            use_container_width=True,
+            on_click=_send_example_prompt,
+            args=(EXAMPLE_PROMPTS[2],),
+        )
+    with _row2_right:
+        st.button(
+            EXAMPLE_PROMPTS[3],
+            key="example_prompt_3",
+            use_container_width=True,
+            on_click=_send_example_prompt,
+            args=(EXAMPLE_PROMPTS[3],),
+        )
+
 # === DYNAMIC END ===
