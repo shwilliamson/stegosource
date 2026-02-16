@@ -4,5 +4,15 @@ version = "0.1.0"
 description = "Dynamic Data Visualization Agent with Self-Modifying UI"
 requires-python = ">=3.11"
 dependencies = [
-    "streamlit",
+    "claude-agent-sdk==0.1.36",
+    "streamlit==1.54.0",
+    "plotly==6.5.2",
+    "python-dotenv==1.2.1",
+    "requests==2.32.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.9.0",
 ]
