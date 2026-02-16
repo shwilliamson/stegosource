@@ -3,7 +3,8 @@
     "playwright": {
       "command": "npx",
       "args": [
-        "@playwright/mcp@latest"
+        "@playwright/mcp@latest",
+        "--headless"
       ],
       "description": "Browser automation for E2E testing and visual verification"
     }

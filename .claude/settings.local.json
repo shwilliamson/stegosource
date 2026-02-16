@@ -2,5 +2,9 @@
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "playwright"
-  ]
+  ],
+  "statusLine": {
+    "type": "command",
+    "command": "input=$(cat); branch=$(git -C \"$(echo \"$input\" | jq -r '.workspace.current_dir')\" branch --show-current 2>/dev/null || echo 'no-git'); model=$(echo \"$input\" | jq -r '.model.display_name'); remaining=$(echo \"$input\" | jq -r '.context_window.remaining_percentage // empty'); if [ -n \"$remaining\" ]; then printf \"%s | %s | Context: %.0f%% remaining\" \"$branch\" \"$model\" \"$remaining\"; else printf \"%s | %s\" \"$branch\" \"$model\"; fi"
+  }
 }

@@ -1,52 +1,70 @@
+## Project Commands
 
-
-<!-- AUTOMATASAURUS:COMMANDS:START -->
-<!-- Do not manually edit this section. Run `npx automatasaurus update` to refresh. -->
-
-## Automatasaurus Commands
-
-These are the standard commands used by Automatasaurus agents. Update the commands above to match your project's actual configuration.
-
-### Quick Reference (Update These!)
+### Quick Reference
 
 | Action | Command |
 |--------|---------|
-| Install dependencies | `npm install` |
-| Start development server | `npm run dev` |
-| Run all tests | `npm test` |
-| Run E2E tests | `npm run test:e2e` |
-| Build for production | `npm run build` |
-| Lint code | `npm run lint` |
+| Install dependencies | `uv pip install -e ".[dev]" 2>/dev/null \|\| pip install -e ".[dev]"` |
+| Start development server | `streamlit run app.py --server.runOnSave=true` |
+| Stop development server | `pkill -f "streamlit run"` |
+| Run all tests | `pytest` |
+| Run E2E tests | Use Playwright MCP (see below) |
+| Lint code | `ruff check .` |
+| Format code | `ruff format .` |
 
-### Browser Testing with Playwright
+### Application Lifecycle
 
 ```bash
-# Install Playwright browsers
-npx playwright install
+# Install dependencies
+uv pip install -e ".[dev]" 2>/dev/null || pip install -e ".[dev]"
 
-# Run Playwright tests
-npx playwright test
+# Set up environment variables
+cp .env.example .env
+# Edit .env to add: ANTHROPIC_API_KEY, ALPHAVANTAGE_API_KEY
 
-# Run with UI
-npx playwright test --ui
+# Start development server (hot-reloads on file save)
+streamlit run app.py --server.runOnSave=true
 
-# Record new test
-npx playwright codegen [url]
+# App runs at http://localhost:8501
+
+# Stop the server
+# Ctrl+C in the terminal, or:
+pkill -f "streamlit run"
+```
+
+### Hot-Reload
+
+Streamlit auto-reloads when `app.py` is saved (`--server.runOnSave=true`). No manual restart needed for UI changes. Restart required only for:
+- Dependency changes (pyproject.toml)
+- Streamlit config changes (.streamlit/config.toml)
+- Environment variable changes (.env)
+
+### Browser Testing with Playwright MCP
+
+The Tester agent uses the Playwright MCP server for E2E testing. No Playwright CLI installation needed.
+
+```
+1. Ensure app is running: streamlit run app.py --server.runOnSave=true &
+2. Use Playwright MCP tools:
+   - browser_navigate → http://localhost:8501
+   - browser_snapshot → get accessibility tree (preferred for interaction)
+   - browser_take_screenshot → visual verification
+   - browser_click / browser_type → interact with elements
+   - browser_wait_for → handle async loading and hot-reloads
+   - browser_console_messages → check for JS errors
 ```
 
 ### Git Workflow
 
 ```bash
-# Create feature branch
-git checkout -b feature/issue-[number]-[description]
+# Create feature branch (follows convention: {issue-num}-{slug})
+git checkout -b 42-user-authentication
 
 # Push and create PR
 git push -u origin [branch-name]
 gh pr create
 ```
 
----
-
-**Note**: Update the commands above to match your project. This section is managed by Automatasaurus.
-
+<!-- AUTOMATASAURUS:COMMANDS:START -->
+<!-- Managed section preserved for framework compatibility -->
 <!-- AUTOMATASAURUS:COMMANDS:END -->

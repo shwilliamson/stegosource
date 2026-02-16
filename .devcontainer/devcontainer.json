@@ -12,7 +12,7 @@
       "onAutoForward": "openBrowser"
     }
   },
-  "postCreateCommand": "sudo apt-get update || true && sudo apt-get install -y tmux && curl -LsSf https://astral.sh/uv/install.sh | sh && uv pip install --system -e .",
+  "postCreateCommand": "sudo rm -f /etc/apt/sources.list.d/yarn.list && sudo apt-get update || true && sudo apt-get install -y tmux && curl -LsSf https://astral.sh/uv/install.sh | sh && uv pip install --system -e . && npx playwright install --with-deps chrome",
   "customizations": {
     "codespaces": {
       "openFiles": ["README.md"]
