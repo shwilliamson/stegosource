@@ -140,7 +140,10 @@ def _render_tool_calls(tool_calls: list[dict[str, object]]) -> None:
 # ---------------------------------------------------------------------------
 
 with st.sidebar:
-    st.image("logo.jpeg", width=200)
+    st.image("logo.jpeg", use_container_width=False)
+    st.markdown("### Stegosource")
+    st.caption("Dynamic Data Visualization Agent")
+    st.divider()
 
     # Render existing chat history
     for msg in st.session_state.messages:
@@ -245,12 +248,14 @@ def _send_example_prompt(prompt_text: str) -> None:
 _left_spacer, _center_col, _right_spacer = st.columns([1, 2, 1])
 
 with _center_col:
-    st.image("logo.jpeg", width=280)
+    st.image("logo.jpeg", use_container_width=False)
     st.caption("Dynamic Data Visualization Agent")
     st.write(
         "Ask Stegosource to fetch financial data, build interactive charts, "
         "and create dashboards — all through natural conversation."
     )
+
+    st.divider()
 
     # 2x2 grid of example prompt cards
     _row1_left, _row1_right = st.columns(2)
